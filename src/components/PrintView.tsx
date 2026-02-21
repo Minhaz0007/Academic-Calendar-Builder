@@ -39,30 +39,29 @@ export const PrintView: React.FC<PrintViewProps> = ({
 
       {/* ── Banner Header ── */}
       <header
-        className="flex items-center gap-3 px-4 py-2 flex-shrink-0"
+        className="flex items-center gap-4 px-5 py-3 flex-shrink-0"
         style={{ backgroundColor: accentColor }}
       >
-        {/* Logo */}
-        {logoUrl ? (
+        {/* Logo — same fallback as CalendarHeader */}
+        <div className="w-12 h-12 rounded-full border-2 border-white/50 overflow-hidden bg-white/10 flex-shrink-0">
           <img
-            src={logoUrl}
-            alt="Logo"
-            className="h-10 w-10 rounded-full object-contain flex-shrink-0 border border-white/40"
+            src={logoUrl || '/logo.png'}
+            alt="School Logo"
+            className="w-full h-full object-cover"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
           />
-        ) : (
-          <div className="h-10 w-10 rounded-full border border-white/30 flex-shrink-0" />
-        )}
+        </div>
 
         {/* Name + address */}
-        <div className="flex-1 text-center leading-tight">
+        <div className="flex-1 text-center leading-tight min-w-0">
           <div
-            className="font-bold uppercase tracking-widest text-xl leading-none"
+            className="font-bold uppercase tracking-widest text-2xl leading-none"
             style={{ color: headerTextColor }}
           >
             {institutionName}
           </div>
           <div
-            className="text-[8px] italic mt-0.5 opacity-85"
+            className="text-[9px] italic mt-0.5 opacity-85"
             style={{ color: headerTextColor }}
           >
             {subtitle}
@@ -71,8 +70,8 @@ export const PrintView: React.FC<PrintViewProps> = ({
 
         {/* Year */}
         <div className="text-right flex-shrink-0" style={{ color: headerTextColor }}>
-          <div className="text-[7px] uppercase tracking-wider opacity-75">Academic Calendar</div>
-          <div className="font-bold text-lg leading-none mt-0.5">
+          <div className="font-bold text-xl uppercase tracking-wide leading-tight">Academic Calendar</div>
+          <div className="font-bold text-xl leading-none mt-0.5">
             {startYear} – {startYear + 1}
           </div>
         </div>
