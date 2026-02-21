@@ -3,6 +3,7 @@ import { CalendarDay, LegendItem, ImportantDate } from '../types';
 import { CalendarTheme } from '../themes';
 
 // ── Month helpers (mirrors ImportantDates.tsx) ─────────────────────────────────
+const MONTH_ABBR_KEYS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_ABBR_MAP: Record<string, string> = {
   Jan: 'JANUARY', Feb: 'FEBRUARY', Mar: 'MARCH', Apr: 'APRIL',
   May: 'MAY', Jun: 'JUNE', Jul: 'JULY', Aug: 'AUGUST',
@@ -13,14 +14,20 @@ const FULL_MONTHS = [
   'JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER',
 ];
 
-function getMonthLabel(date: ImportantDate): string | null {
+function getMonthLabel(date: ImportantDate, startMonth: number, startYear: number): string | null {
   if (date.firstDate) {
     const d = new Date(date.firstDate + 'T00:00:00Z');
-    if (!isNaN(d.getTime())) return FULL_MONTHS[d.getUTCMonth()];
+    if (!isNaN(d.getTime())) {
+      return `${FULL_MONTHS[d.getUTCMonth()]}, ${d.getUTCFullYear()}`;
+    }
   }
   const firstLine = (date.dateRange || '').split('\n')[0].trim();
-  for (const [abbr, full] of Object.entries(MONTH_ABBR_MAP)) {
-    if (firstLine.startsWith(abbr)) return full;
+  for (const abbr of MONTH_ABBR_KEYS) {
+    if (firstLine.startsWith(abbr)) {
+      const monthIdx = MONTH_ABBR_KEYS.indexOf(abbr);
+      const year = monthIdx >= startMonth ? startYear : startYear + 1;
+      return `${MONTH_ABBR_MAP[abbr]}, ${year}`;
+    }
   }
   return null;
 }
@@ -29,6 +36,7 @@ interface PrintViewProps {
   institutionName: string;
   subtitle: string;
   startYear: number;
+  startMonth: number;
   logoUrl: string | null;
   dayColors: Record<string, string>;
   legendItems: LegendItem[];
@@ -46,6 +54,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
   institutionName,
   subtitle,
   startYear,
+  startMonth,
   logoUrl,
   dayColors,
   legendItems,
@@ -154,12 +163,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
             {(() => {
               let prevMonth: string | null = null;
               return importantDates.map(date => {
-                const legendItem = date.legendItemId
-                  ? legendItems.find(i => i.id === date.legendItemId)
-                  : undefined;
-                const entryColor = legendItem?.color ?? date.color;
-
-                const monthLabel = getMonthLabel(date);
+                const monthLabel = getMonthLabel(date, startMonth, startYear);
                 const showMonthHeader = monthLabel !== null && monthLabel !== prevMonth;
                 prevMonth = monthLabel;
 
@@ -173,23 +177,8 @@ export const PrintView: React.FC<PrintViewProps> = ({
                     )}
 
                     <div className="mt-0.5">
-                      {/* Description row with color dot */}
-                      <div className="flex items-center gap-1.5 leading-tight">
-                        {entryColor ? (
-                          <span
-                            className="inline-block flex-shrink-0 rounded-sm"
-                            style={{
-                              width: '8px', height: '8px', minWidth: '8px',
-                              backgroundColor: entryColor,
-                              border: '0.5px solid rgba(0,0,0,0.3)',
-                            }}
-                          />
-                        ) : (
-                          <span
-                            className="inline-block flex-shrink-0 rounded-full bg-gray-400"
-                            style={{ width: '6px', height: '6px', minWidth: '6px' }}
-                          />
-                        )}
+                      {/* Description row — no color bullet */}
+                      <div className="leading-tight">
                         <span className="font-bold uppercase text-[9px] leading-tight">
                           {date.description}
                         </span>
@@ -197,7 +186,6 @@ export const PrintView: React.FC<PrintViewProps> = ({
                       {/* Date range */}
                       <div
                         className="whitespace-pre-wrap leading-snug text-gray-700 text-[8px] mt-px"
-                        style={{ paddingLeft: '12px' }}
                       >
                         {date.dateRange}
                       </div>
@@ -222,7 +210,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
                   {usedLegendItems.map(item => (
                     <div key={item.id} className="flex items-center gap-1">
                       <span
-                        className="inline-block flex-shrink-0 rounded-sm"
+                        className="inline-block flex-shrink-0"
                         style={{
                           width: '8px', height: '8px', minWidth: '8px',
                           backgroundColor: item.color,
@@ -235,7 +223,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
                   {manualColored.map(d => (
                     <div key={d.id} className="flex items-center gap-1">
                       <span
-                        className="inline-block flex-shrink-0 rounded-sm"
+                        className="inline-block flex-shrink-0"
                         style={{
                           width: '8px', height: '8px', minWidth: '8px',
                           backgroundColor: d.color,
