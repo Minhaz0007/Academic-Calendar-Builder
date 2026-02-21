@@ -105,8 +105,9 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
 
         {/* Day cells */}
         {days.map((day, idx) => {
-          const colorId = day.isCurrentMonth ? dayColors[day.date] : undefined;
-          const legendItem = colorId ? legendItems.find(i => i.color === colorId) : undefined;
+          const legendItemId = day.isCurrentMonth ? dayColors[day.date] : undefined;
+          const legendItem = legendItemId ? legendItems.find(i => i.id === legendItemId) : undefined;
+          const colorId = legendItem?.color; // hex color for background/text
           const showCross = legendItem?.style === 'cross';
           const colIdx = idx % 7;
           const isWeekend = highlightWeekends && (colIdx === 0 || colIdx === 6);
