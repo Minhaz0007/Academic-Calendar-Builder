@@ -10,6 +10,8 @@ interface PrintViewProps {
   legendItems: LegendItem[];
   importantDates: ImportantDate[];
   months: { year: number; month: number }[];
+  accentColor?: string;
+  highlightWeekends?: boolean;
 }
 
 export const PrintView: React.FC<PrintViewProps> = ({
@@ -21,63 +23,98 @@ export const PrintView: React.FC<PrintViewProps> = ({
   legendItems,
   importantDates,
   months,
+  accentColor = '#a5f3fc',
+  highlightWeekends = false,
 }) => {
+  // Determine grid columns for different month counts
+  const cols = months.length <= 6 ? 3 : months.length <= 9 ? 3 : 4;
+
   return (
     <div className="hidden print:flex flex-col w-full h-full bg-white text-black font-serif p-0 box-border">
       {/* Header */}
-      <header className="flex flex-col items-center mb-2 border-b-2 border-transparent relative">
-        <div className="flex items-center justify-center gap-4 w-full">
-           {logoUrl && (
-             <img src={logoUrl} alt="Logo" className="h-24 w-24 object-contain absolute left-0 top-0" />
-           )}
-           <div className="text-center">
-             <h1 className="text-4xl font-bold uppercase tracking-wider">{institutionName}</h1>
-             <p className="text-sm italic mt-1">{subtitle}</p>
-             <h2 className="text-3xl font-bold mt-1">{startYear}/{startYear + 1}</h2>
-           </div>
+      <header className="flex items-center justify-center mb-2 border-b-2 border-black pb-2 relative">
+        {logoUrl && (
+          <img src={logoUrl} alt="Logo" className="h-20 w-20 object-contain absolute left-0 top-0" />
+        )}
+        <div className="text-center">
+          <h1 className="text-4xl font-bold uppercase tracking-wider">{institutionName}</h1>
+          <p className="text-sm italic mt-0.5">{subtitle}</p>
+          <h2 className="text-2xl font-bold mt-0.5">{startYear} / {startYear + 1}</h2>
         </div>
       </header>
 
-      <div className="flex flex-1 gap-4 items-stretch">
-        {/* Left Column: Calendar + Legend */}
-        <div className="flex flex-col flex-[3] gap-2">
-           {/* Calendar Grid */}
-           <div className="grid grid-cols-4 gap-x-2 gap-y-2 flex-1">
-             {months.map(m => (
-               <PrintMonth 
-                 key={`${m.year}-${m.month}`} 
-                 year={m.year} 
-                 month={m.month} 
-                 dayColors={dayColors} 
-                 legendItems={legendItems} 
-               />
-             ))}
-           </div>
+      <div className="flex flex-1 gap-3 items-stretch min-h-0">
+        {/* Left: Calendar Grid + Legend */}
+        <div className="flex flex-col flex-[3] gap-2 min-h-0">
 
-           {/* Legend */}
-           <div className="mt-2">
-             <div className="grid grid-cols-4 gap-0 border border-black text-[9px]">
-               {legendItems.map(item => (
-                 <div key={item.id} className="flex border-r border-b border-black last:border-r-0 [&:nth-child(4n)]:border-r-0 [&:nth-last-child(-n+4)]:border-b-0">
-                   <div 
-                     className="w-1/3 p-1 font-bold uppercase flex items-center justify-center text-center leading-tight"
-                     style={{ backgroundColor: item.color }}
-                   >
-                     {item.label}
-                   </div>
-                   <div className="w-2/3 p-1 flex items-center justify-center text-center leading-tight bg-white">
-                     {item.description}
-                   </div>
-                 </div>
-               ))}
-             </div>
-           </div>
+          {/* Month Grid */}
+          <div
+            className="flex-1 grid gap-x-2 gap-y-1"
+            style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+          >
+            {months.map(m => (
+              <PrintMonth
+                key={`${m.year}-${m.month}`}
+                year={m.year}
+                month={m.month}
+                dayColors={dayColors}
+                legendItems={legendItems}
+                accentColor={accentColor}
+                highlightWeekends={highlightWeekends}
+              />
+            ))}
+          </div>
+
+          {/* Legend Grid */}
+          <div className="border border-black text-[9px]">
+            <div
+              className="grid"
+              style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}
+            >
+              {legendItems.map((item, i) => {
+                const totalRows = Math.ceil(legendItems.length / 4);
+                const row = Math.floor(i / 4);
+                const col = i % 4;
+                const isLastRow = row === totalRows - 1;
+                const isLastCol = col === 3 || i === legendItems.length - 1;
+                return (
+                  <div
+                    key={item.id}
+                    className="flex"
+                    style={{
+                      borderRight: isLastCol ? 'none' : '1px solid black',
+                      borderBottom: isLastRow ? 'none' : '1px solid black',
+                    }}
+                  >
+                    {/* Colored label box */}
+                    <div
+                      className="flex items-center justify-center text-center font-bold uppercase leading-tight p-1"
+                      style={{
+                        backgroundColor: item.color,
+                        width: '35%',
+                        borderRight: '1px solid black',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {item.label}
+                    </div>
+                    {/* Description */}
+                    <div className="flex items-center justify-center text-center leading-tight p-1 bg-white" style={{ width: '65%' }}>
+                      {item.description || ''}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
-        {/* Right Column: Important Dates */}
-        <div className="flex-1 border-l-2 border-gray-800 pl-3 flex flex-col pt-2">
-          <h3 className="text-sm font-bold uppercase border-b-2 border-black mb-2 pb-0.5">Important Dates</h3>
-          <div className="space-y-2 text-[10px]">
+        {/* Right: Important Dates */}
+        <div className="flex-1 border-l-2 border-black pl-3 flex flex-col pt-1 min-h-0" style={{ maxWidth: '22%' }}>
+          <h3 className="text-sm font-bold uppercase border-b-2 border-black mb-2 pb-0.5">
+            Important Dates
+          </h3>
+          <div className="space-y-2 text-[10px] overflow-hidden">
             {importantDates.map(date => (
               <div key={date.id}>
                 <div className="font-bold uppercase text-[9px]">{date.description}</div>
@@ -91,62 +128,76 @@ export const PrintView: React.FC<PrintViewProps> = ({
   );
 };
 
+// ── Print-specific Month Component ────────────────────────────────────────────
 const PrintMonth: React.FC<{
   year: number;
   month: number;
   dayColors: Record<string, string>;
   legendItems: LegendItem[];
-}> = ({ year, month, dayColors, legendItems }) => {
+  accentColor?: string;
+  highlightWeekends?: boolean;
+}> = ({ year, month, dayColors, legendItems, accentColor = '#a5f3fc', highlightWeekends = false }) => {
   const monthName = new Date(year, month).toLocaleString('default', { month: 'long' });
   const shortYear = String(year).slice(-2);
-  
-  // Calculate days
+
   const days: CalendarDay[] = [];
-  const firstDayOfMonth = new Date(year, month, 1);
-  const lastDayOfMonth = new Date(year, month + 1, 0);
-  
-  const startPadding = firstDayOfMonth.getDay(); 
-  for (let i = 0; i < startPadding; i++) {
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+
+  for (let i = 0; i < firstDay.getDay(); i++) {
     days.push({ date: `pad-start-${i}`, isCurrentMonth: false });
   }
-  
-  for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-    days.push({ date: dateStr, isCurrentMonth: true });
+  for (let i = 1; i <= lastDay.getDate(); i++) {
+    days.push({
+      date: `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`,
+      isCurrentMonth: true,
+    });
   }
-  
-  const remainingCells = 42 - days.length;
-  for (let i = 0; i < remainingCells; i++) {
+  const remaining = 42 - days.length;
+  for (let i = 0; i < remaining; i++) {
     days.push({ date: `pad-end-${i}`, isCurrentMonth: false });
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="bg-cyan-200 text-black font-bold text-center text-[10px] uppercase py-0.5 border border-black border-b-0">
+    <div className="flex flex-col">
+      {/* Month title bar */}
+      <div
+        className="text-black font-bold text-center text-[10px] uppercase py-0.5 border border-black border-b-0 leading-tight"
+        style={{ backgroundColor: accentColor }}
+      >
         {monthName} '{shortYear}
       </div>
-      <div className="grid grid-cols-7 border border-black text-[8px] flex-1">
+      {/* Day grid */}
+      <div className="grid grid-cols-7 border border-black text-[7.5px] flex-1">
+        {/* Weekday headers */}
         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-          <div key={i} className="text-center font-bold bg-gray-200 border-b border-black border-r last:border-r-0 border-gray-400 py-0.5">
+          <div
+            key={i}
+            className="text-center font-bold bg-gray-200 border-b border-black py-0.5 leading-tight"
+            style={{ borderRight: i < 6 ? '1px solid #d1d5db' : 'none' }}
+          >
             {d}
           </div>
         ))}
+        {/* Day cells */}
         {days.map((day, idx) => {
           const colorId = day.isCurrentMonth ? dayColors[day.date] : undefined;
           const legendItem = colorId ? legendItems.find(i => i.color === colorId) : undefined;
           const showCross = legendItem?.style === 'cross';
-          
+          const colIdx = idx % 7;
+          const isWeekend = highlightWeekends && (colIdx === 0 || colIdx === 6) && day.isCurrentMonth && !colorId;
+
           return (
-            <div 
-              key={idx} 
-              className={`
-                aspect-square flex items-center justify-center border-r border-b border-gray-300 last:border-r-0 relative
-                ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''}
-                ${day.isCurrentMonth ? '' : 'bg-gray-100'}
-              `}
-              style={{ backgroundColor: colorId }}
+            <div
+              key={idx}
+              className={`aspect-square flex items-center justify-center relative ${day.isCurrentMonth ? '' : 'bg-gray-100'}`}
+              style={{
+                backgroundColor: colorId || (isWeekend ? '#e0f2fe' : undefined),
+                borderRight: colIdx < 6 ? '1px solid #e5e7eb' : 'none',
+                borderBottom: '1px solid #e5e7eb',
+              }}
             >
-              <span className={`z-10 ${colorId ? 'font-bold' : ''}`}>
+              <span className={`z-10 leading-none ${colorId ? 'font-bold' : ''}`}>
                 {day.isCurrentMonth ? parseInt(day.date.split('-')[2]) : ''}
               </span>
               {showCross && (
