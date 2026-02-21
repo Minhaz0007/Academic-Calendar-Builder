@@ -22,6 +22,7 @@ export interface CalendarSettings {
   numMonths: number; // number of months to display (6, 9, 12)
   accentColor: string; // hex color for month header background
   highlightWeekends: boolean; // shade weekend columns
+  theme: string; // theme id from themes.ts
 }
 
 export interface CalendarState {
