@@ -6,6 +6,7 @@ import { MonthGrid } from './components/MonthGrid';
 import { PrintView } from './components/PrintView';
 import { LegendItem, ImportantDate, CalendarSettings } from './types';
 import { supabase, getSessionKey } from './lib/supabase';
+import { THEMES, getTheme } from './themes';
 import { Printer, Undo2, Redo2, Eraser, Download, Upload, Settings, ChevronDown } from 'lucide-react';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -16,6 +17,7 @@ const DEFAULT_SETTINGS: CalendarSettings = {
   numMonths: 12,
   accentColor: '#a5f3fc',
   highlightWeekends: false,
+  theme: 'classic',
 };
 
 const STORAGE_KEY = 'academicCalendarState_v2';
@@ -52,8 +54,11 @@ function App() {
 
   // UI / interaction state
   const [selectedColorId, setSelectedColorId] = useState<string | null>(DEFAULT_LEGEND[0].id);
-  const [lastClickedDate, setLastClickedDate] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+
+  // Click-click range selection
+  const [pendingRangeStart, setPendingRangeStart] = useState<string | null>(null);
+  const [hoveredDate, setHoveredDate] = useState<string | null>(null);
 
   // Date range mode: 'date' = individual date pickers, 'month' = whole-month selectors
   const [rangeMode, setRangeMode] = useState<'date' | 'month'>('date');
@@ -74,6 +79,20 @@ function App() {
   const [historyIndex, setHistoryIndex] = useState(0);
 
   const importRef = useRef<HTMLInputElement>(null);
+
+  // Clear pending range when selected color changes
+  useEffect(() => {
+    setPendingRangeStart(null);
+  }, [selectedColorId]);
+
+  // Escape key cancels pending range start
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPendingRangeStart(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // ── Persist & restore (Supabase) ───────────────────────────────────────────
   useEffect(() => {
@@ -189,23 +208,31 @@ function App() {
     pushToHistory(fillRange(dayColors, fromISO, toISO, item.color));
   };
 
-  // ── Day click ──────────────────────────────────────────────────────────────
-  const handleDayClick = (date: string, isShiftKey: boolean) => {
+  // ── Click-click range selection ────────────────────────────────────────────
+  const handleDayClick = (date: string) => {
     if (!selectedColorId) return;
     const item = legendItems.find(i => i.id === selectedColorId);
     if (!item) return;
 
-    if (isShiftKey && lastClickedDate) {
-      pushToHistory(fillRange(dayColors, lastClickedDate, date, item.color));
+    if (!pendingRangeStart) {
+      // First click: set range start anchor
+      setPendingRangeStart(date);
     } else {
-      const newColors = { ...dayColors };
-      if (newColors[date] === item.color) {
-        delete newColors[date];
+      // Second click: apply range
+      if (date === pendingRangeStart) {
+        // Same date clicked: toggle single day
+        const newColors = { ...dayColors };
+        if (newColors[date] === item.color) {
+          delete newColors[date];
+        } else {
+          newColors[date] = item.color;
+        }
+        pushToHistory(newColors);
       } else {
-        newColors[date] = item.color;
+        // Different date: fill range
+        pushToHistory(fillRange(dayColors, pendingRangeStart, date, item.color));
       }
-      pushToHistory(newColors);
-      setLastClickedDate(date);
+      setPendingRangeStart(null);
     }
   };
 
@@ -275,10 +302,31 @@ function App() {
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < colorHistory.length - 1;
 
+  // Active theme
+  const activeTheme = getTheme(settings.theme ?? 'classic');
+
+  // Effective accent: if user has manually overridden via the color picker, use that;
+  // otherwise fall back to the theme's accent color.
+  // We track a manual override: if settings.accentColor differs from the classic default,
+  // the user has chosen it explicitly. Here we just always let the theme accent apply
+  // unless the user changed it after picking the theme (settings.accentColor takes priority
+  // only for the 'classic' theme behaviour – we honour it as an override across all themes).
+  const effectiveAccent = settings.accentColor !== DEFAULT_SETTINGS.accentColor
+    ? settings.accentColor
+    : activeTheme.accentColor;
+
+  // Preview color for hover range
+  const previewColor = selectedColorId
+    ? legendItems.find(i => i.id === selectedColorId)?.color
+    : undefined;
+
   return (
     <>
       {/* ── Interactive View (hidden on print) ──────────────────────────── */}
-      <div className="min-h-screen bg-gray-100 text-gray-900 font-sans print:hidden">
+      <div
+        className="min-h-screen text-gray-900 font-sans print:hidden"
+        style={{ backgroundColor: activeTheme.appBg }}
+      >
 
         {/* ── Sticky Toolbar ─────────────────────────────────────────────── */}
         <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
@@ -438,6 +486,40 @@ function App() {
             <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
               <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-6 text-sm">
 
+                {/* Theme Picker */}
+                <div className="flex items-center gap-2">
+                  <label className="font-medium text-gray-600 whitespace-nowrap">Theme:</label>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {THEMES.map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => {
+                          setSettings(s => ({
+                            ...s,
+                            theme: t.id,
+                            accentColor: DEFAULT_SETTINGS.accentColor, // reset manual override
+                          }));
+                        }}
+                        title={t.name}
+                        className={`px-2.5 py-1 rounded border text-xs font-medium transition-all ${
+                          settings.theme === t.id
+                            ? 'ring-2 ring-blue-500 ring-offset-1 scale-105'
+                            : 'hover:scale-105'
+                        }`}
+                        style={{
+                          backgroundColor: t.accentColor,
+                          color: t.headerTextColor,
+                          borderColor: t.borderColor,
+                        }}
+                      >
+                        {t.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="w-px h-5 bg-gray-300" />
+
                 {/* Start Month */}
                 <div className="flex items-center gap-2">
                   <label className="font-medium text-gray-600 whitespace-nowrap">Start Month:</label>
@@ -466,16 +548,16 @@ function App() {
                   </div>
                 </div>
 
-                {/* Header Color */}
+                {/* Header Color override */}
                 <div className="flex items-center gap-2">
                   <label className="font-medium text-gray-600 whitespace-nowrap">Header Color:</label>
                   <input
                     type="color"
-                    value={settings.accentColor}
+                    value={effectiveAccent}
                     onChange={(e) => setSettings(s => ({ ...s, accentColor: e.target.value }))}
                     className="w-8 h-8 rounded cursor-pointer border border-gray-300 p-0.5 bg-white"
                   />
-                  <span className="text-xs text-gray-400">month headers</span>
+                  <span className="text-xs text-gray-400">override</span>
                 </div>
 
                 {/* Highlight Weekends */}
@@ -492,14 +574,30 @@ function App() {
                   </label>
                 </div>
 
-                <span className="text-xs text-gray-400 ml-auto italic">All changes auto-saved to browser</span>
+                <span className="text-xs text-gray-400 ml-auto italic">All changes auto-saved</span>
               </div>
             </div>
           )}
         </div>
 
+        {/* ── Pending range hint ─────────────────────────────────────────────── */}
+        {pendingRangeStart && (
+          <div className="sticky top-[57px] z-10 bg-blue-50 border-b border-blue-200 px-4 py-1.5 text-center text-sm text-blue-700 font-medium">
+            Range start: <strong>{pendingRangeStart}</strong> — click another date to complete the range, or click the same date to select just that day.{' '}
+            <button
+              onClick={() => setPendingRangeStart(null)}
+              className="underline hover:text-blue-900 ml-2"
+            >
+              Cancel (Esc)
+            </button>
+          </div>
+        )}
+
         {/* ── Main Canvas ───────────────────────────────────────────────────── */}
-        <main className="max-w-[297mm] mx-auto p-8 bg-white shadow-xl my-8 min-h-[210mm]">
+        <main
+          className="max-w-[297mm] mx-auto p-8 shadow-xl my-8 min-h-[210mm]"
+          style={{ backgroundColor: activeTheme.canvasBg }}
+        >
           <CalendarHeader
             institutionName={institutionName}
             setInstitutionName={setInstitutionName}
@@ -522,8 +620,13 @@ function App() {
                     dayColors={dayColors}
                     legendItems={legendItems}
                     onDayClick={handleDayClick}
-                    accentColor={settings.accentColor}
+                    onDayHover={setHoveredDate}
+                    accentColor={effectiveAccent}
                     highlightWeekends={settings.highlightWeekends}
+                    pendingRangeStart={pendingRangeStart}
+                    hoveredDate={hoveredDate}
+                    previewColor={previewColor}
+                    theme={activeTheme}
                   />
                 ))}
               </div>
@@ -538,7 +641,7 @@ function App() {
               </div>
             </div>
 
-            <div className="border-l pl-4 border-gray-200 h-full">
+            <div className="border-l pl-4 h-full" style={{ borderColor: activeTheme.borderColor }}>
               <ImportantDates
                 dates={importantDates}
                 setDates={setImportantDates}
@@ -558,7 +661,7 @@ function App() {
         legendItems={legendItems}
         importantDates={importantDates}
         months={months}
-        accentColor={settings.accentColor}
+        accentColor={effectiveAccent}
         highlightWeekends={settings.highlightWeekends}
       />
 
