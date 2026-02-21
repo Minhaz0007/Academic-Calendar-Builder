@@ -18,6 +18,8 @@ const DEFAULT_SETTINGS: CalendarSettings = {
   accentColor: '#a5f3fc',
   highlightWeekends: false,
   theme: 'classic',
+  dateFontSize: 10,
+  dateBold: false,
 };
 
 const STORAGE_KEY = 'academicCalendarState_v2';
@@ -625,6 +627,37 @@ function App() {
                   </label>
                 </div>
 
+                <div className="w-px h-5 bg-gray-300" />
+
+                {/* Date font size */}
+                <div className="flex items-center gap-2">
+                  <label className="font-medium text-gray-600 whitespace-nowrap">Date Size:</label>
+                  <input
+                    type="range"
+                    min={7}
+                    max={16}
+                    step={1}
+                    value={settings.dateFontSize ?? 10}
+                    onChange={(e) => setSettings(s => ({ ...s, dateFontSize: parseInt(e.target.value) }))}
+                    className="w-24 accent-blue-600"
+                  />
+                  <span className="text-xs text-gray-500 w-6">{settings.dateFontSize ?? 10}px</span>
+                </div>
+
+                {/* Date bold */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="date-bold"
+                    checked={settings.dateBold ?? false}
+                    onChange={(e) => setSettings(s => ({ ...s, dateBold: e.target.checked }))}
+                    className="w-4 h-4 text-blue-600 rounded border-gray-300"
+                  />
+                  <label htmlFor="date-bold" className="font-medium text-gray-600 cursor-pointer">
+                    Bold Dates
+                  </label>
+                </div>
+
                 <span className="text-xs text-gray-400 ml-auto italic">All changes auto-saved</span>
               </div>
             </div>
@@ -658,6 +691,8 @@ function App() {
             setStartYear={setStartYear}
             logoUrl={logoUrl}
             setLogoUrl={setLogoUrl}
+            accentColor={effectiveAccent}
+            headerTextColor={activeTheme.headerTextColor}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-[3fr_1fr] gap-8 h-full">
@@ -678,6 +713,8 @@ function App() {
                     hoveredDate={hoveredDate}
                     previewColor={previewColor}
                     theme={activeTheme}
+                    dateFontSize={settings.dateFontSize ?? 10}
+                    dateBold={settings.dateBold ?? false}
                   />
                 ))}
               </div>
@@ -715,6 +752,9 @@ function App() {
         months={months}
         accentColor={effectiveAccent}
         highlightWeekends={settings.highlightWeekends}
+        dateFontSize={settings.dateFontSize ?? 10}
+        dateBold={settings.dateBold ?? false}
+        headerTextColor={activeTheme.headerTextColor}
       />
 
       <style>{`

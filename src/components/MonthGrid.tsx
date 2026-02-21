@@ -15,6 +15,8 @@ interface MonthGridProps {
   hoveredDate?: string | null;
   previewColor?: string;
   theme?: CalendarTheme;
+  dateFontSize?: number;
+  dateBold?: boolean;
 }
 
 export const MonthGrid: React.FC<MonthGridProps> = ({
@@ -30,6 +32,8 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
   hoveredDate = null,
   previewColor,
   theme,
+  dateFontSize = 10,
+  dateBold = false,
 }) => {
   const effectiveAccent = accentColor ?? theme?.accentColor ?? '#a5f3fc';
   const monthName = new Date(year, month).toLocaleString('default', { month: 'long' });
@@ -77,8 +81,9 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
         {monthName} '{shortYear}
       </h4>
       <div
-        className="grid grid-cols-7 gap-px text-[10px] leading-tight"
+        className="grid grid-cols-7 gap-px leading-tight"
         style={{
+          fontSize: `${dateFontSize}px`,
           backgroundColor: theme?.gridGap ?? '#d1d5db',
           border: `1px solid ${theme?.borderColor ?? '#d1d5db'}`,
         }}
@@ -143,7 +148,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
               style={{
                 backgroundColor: bgColor,
                 color: textColor,
-                fontWeight: colorId ? 700 : 500,
+                fontWeight: dateBold || colorId ? 700 : 500,
               }}
             >
               <span className="relative z-10">
