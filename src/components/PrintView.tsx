@@ -12,6 +12,9 @@ interface PrintViewProps {
   months: { year: number; month: number }[];
   accentColor?: string;
   highlightWeekends?: boolean;
+  dateFontSize?: number;
+  dateBold?: boolean;
+  headerTextColor?: string;
 }
 
 export const PrintView: React.FC<PrintViewProps> = ({
@@ -25,31 +28,65 @@ export const PrintView: React.FC<PrintViewProps> = ({
   months,
   accentColor = '#a5f3fc',
   highlightWeekends = false,
+  dateFontSize = 10,
+  dateBold = false,
+  headerTextColor = '#000000',
 }) => {
-  // Determine grid columns for different month counts
   const cols = months.length <= 6 ? 3 : months.length <= 9 ? 3 : 4;
 
   return (
-    <div className="hidden print:flex flex-col w-full h-full bg-white text-black font-serif p-0 box-border">
-      {/* Header */}
-      <header className="flex items-center justify-center mb-2 border-b-2 border-black pb-2 relative">
-        {logoUrl && (
-          <img src={logoUrl} alt="Logo" className="h-20 w-20 object-contain absolute left-0 top-0" />
+    <div className="hidden print:flex print:flex-col w-full h-screen bg-white text-black font-serif overflow-hidden box-border">
+
+      {/* ── Banner Header ── */}
+      <header
+        className="flex items-center gap-3 px-4 py-2 flex-shrink-0"
+        style={{ backgroundColor: accentColor }}
+      >
+        {/* Logo */}
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt="Logo"
+            className="h-10 w-10 rounded-full object-contain flex-shrink-0 border border-white/40"
+          />
+        ) : (
+          <div className="h-10 w-10 rounded-full border border-white/30 flex-shrink-0" />
         )}
-        <div className="text-center">
-          <h1 className="text-4xl font-bold uppercase tracking-wider">{institutionName}</h1>
-          <p className="text-sm italic mt-0.5">{subtitle}</p>
-          <h2 className="text-2xl font-bold mt-0.5">{startYear} / {startYear + 1}</h2>
+
+        {/* Name + address */}
+        <div className="flex-1 text-center leading-tight">
+          <div
+            className="font-bold uppercase tracking-widest text-xl leading-none"
+            style={{ color: headerTextColor }}
+          >
+            {institutionName}
+          </div>
+          <div
+            className="text-[8px] italic mt-0.5 opacity-85"
+            style={{ color: headerTextColor }}
+          >
+            {subtitle}
+          </div>
+        </div>
+
+        {/* Year */}
+        <div className="text-right flex-shrink-0" style={{ color: headerTextColor }}>
+          <div className="text-[7px] uppercase tracking-wider opacity-75">Academic Calendar</div>
+          <div className="font-bold text-lg leading-none mt-0.5">
+            {startYear} – {startYear + 1}
+          </div>
         </div>
       </header>
 
-      <div className="flex flex-1 gap-3 items-stretch min-h-0">
-        {/* Left: Calendar Grid + Legend */}
-        <div className="flex flex-col flex-[3] gap-2 min-h-0">
+      {/* ── Body ── */}
+      <div className="flex flex-1 gap-2 px-2 pb-2 min-h-0 overflow-hidden mt-1.5">
 
-          {/* Month Grid */}
+        {/* Left: Calendar grid + Legend */}
+        <div className="flex flex-col flex-[4] gap-1.5 min-h-0">
+
+          {/* Month grid */}
           <div
-            className="flex-1 grid gap-x-2 gap-y-1"
+            className="flex-1 grid gap-x-1.5 gap-y-1 min-h-0"
             style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
           >
             {months.map(m => (
@@ -61,22 +98,26 @@ export const PrintView: React.FC<PrintViewProps> = ({
                 legendItems={legendItems}
                 accentColor={accentColor}
                 highlightWeekends={highlightWeekends}
+                dateFontSize={dateFontSize}
+                dateBold={dateBold}
+                headerTextColor={headerTextColor}
               />
             ))}
           </div>
 
-          {/* Legend Grid */}
-          <div className="border border-black text-[9px]">
+          {/* Legend */}
+          <div className="border border-black text-[8px] flex-shrink-0">
             <div
               className="grid"
-              style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}
+              style={{ gridTemplateColumns: `repeat(${Math.min(legendItems.length, 4)}, 1fr)` }}
             >
               {legendItems.map((item, i) => {
-                const totalRows = Math.ceil(legendItems.length / 4);
-                const row = Math.floor(i / 4);
-                const col = i % 4;
+                const cols4 = Math.min(legendItems.length, 4);
+                const totalRows = Math.ceil(legendItems.length / cols4);
+                const row = Math.floor(i / cols4);
+                const col = i % cols4;
                 const isLastRow = row === totalRows - 1;
-                const isLastCol = col === 3 || i === legendItems.length - 1;
+                const isLastCol = col === cols4 - 1 || i === legendItems.length - 1;
                 return (
                   <div
                     key={item.id}
@@ -86,20 +127,13 @@ export const PrintView: React.FC<PrintViewProps> = ({
                       borderBottom: isLastRow ? 'none' : '1px solid black',
                     }}
                   >
-                    {/* Colored label box */}
                     <div
-                      className="flex items-center justify-center text-center font-bold uppercase leading-tight p-1"
-                      style={{
-                        backgroundColor: item.color,
-                        width: '35%',
-                        borderRight: '1px solid black',
-                        wordBreak: 'break-word',
-                      }}
+                      className="flex items-center justify-center text-center font-bold uppercase leading-tight p-0.5"
+                      style={{ backgroundColor: item.color, width: '38%', borderRight: '1px solid black', wordBreak: 'break-word' }}
                     >
                       {item.label}
                     </div>
-                    {/* Description */}
-                    <div className="flex items-center justify-center text-center leading-tight p-1 bg-white" style={{ width: '65%' }}>
+                    <div className="flex items-center justify-center text-center leading-tight p-0.5 bg-white" style={{ width: '62%' }}>
                       {item.description || ''}
                     </div>
                   </div>
@@ -110,15 +144,15 @@ export const PrintView: React.FC<PrintViewProps> = ({
         </div>
 
         {/* Right: Important Dates */}
-        <div className="flex-1 border-l-2 border-black pl-3 flex flex-col pt-1 min-h-0" style={{ maxWidth: '22%' }}>
-          <h3 className="text-sm font-bold uppercase border-b-2 border-black mb-2 pb-0.5">
+        <div className="flex flex-col border-l-2 border-black pl-2 min-h-0 overflow-hidden" style={{ width: '18%', flexShrink: 0 }}>
+          <h3 className="text-[9px] font-bold uppercase border-b-2 border-black mb-1 pb-0.5 flex-shrink-0">
             Important Dates
           </h3>
-          <div className="space-y-2 text-[10px] overflow-hidden">
+          <div className="space-y-1.5 text-[8px] overflow-hidden flex-1">
             {importantDates.map(date => (
               <div key={date.id}>
-                <div className="font-bold uppercase text-[9px]">{date.description}</div>
-                <div className="whitespace-pre-wrap leading-tight text-gray-800">{date.dateRange}</div>
+                <div className="font-bold uppercase text-[7.5px] leading-tight">{date.description}</div>
+                <div className="whitespace-pre-wrap leading-tight text-gray-800 text-[7.5px]">{date.dateRange}</div>
               </div>
             ))}
           </div>
@@ -128,7 +162,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
   );
 };
 
-// ── Print-specific Month Component ────────────────────────────────────────────
+// ── Print-specific Month Component ─────────────────────────────────────────
 const PrintMonth: React.FC<{
   year: number;
   month: number;
@@ -136,7 +170,15 @@ const PrintMonth: React.FC<{
   legendItems: LegendItem[];
   accentColor?: string;
   highlightWeekends?: boolean;
-}> = ({ year, month, dayColors, legendItems, accentColor = '#a5f3fc', highlightWeekends = false }) => {
+  dateFontSize?: number;
+  dateBold?: boolean;
+  headerTextColor?: string;
+}> = ({
+  year, month, dayColors, legendItems,
+  accentColor = '#a5f3fc', highlightWeekends = false,
+  dateFontSize = 10, dateBold = false,
+  headerTextColor = '#000000',
+}) => {
   const monthName = new Date(year, month).toLocaleString('default', { month: 'long' });
   const shortYear = String(year).slice(-2);
 
@@ -159,26 +201,31 @@ const PrintMonth: React.FC<{
   }
 
   return (
-    <div className="flex flex-col">
-      {/* Month title bar */}
+    <div className="flex flex-col h-full">
+      {/* Month title */}
       <div
-        className="text-black font-bold text-center text-[10px] uppercase py-0.5 border border-black border-b-0 leading-tight"
-        style={{ backgroundColor: accentColor }}
+        className="font-bold text-center uppercase leading-tight py-0.5 border border-black border-b-0"
+        style={{ backgroundColor: accentColor, color: headerTextColor, fontSize: `${dateFontSize + 1}px` }}
       >
         {monthName} '{shortYear}
       </div>
+
       {/* Day grid */}
-      <div className="grid grid-cols-7 border border-black text-[7.5px] flex-1">
+      <div
+        className="grid grid-cols-7 border border-black flex-1"
+        style={{ gridTemplateRows: 'auto repeat(6, 1fr)', fontSize: `${dateFontSize}px` }}
+      >
         {/* Weekday headers */}
         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
           <div
             key={i}
-            className="text-center font-bold bg-gray-200 border-b border-black py-0.5 leading-tight"
-            style={{ borderRight: i < 6 ? '1px solid #d1d5db' : 'none' }}
+            className="text-center font-bold bg-gray-200 border-b border-black leading-tight py-px"
+            style={{ borderRight: i < 6 ? '1px solid #9ca3af' : 'none' }}
           >
             {d}
           </div>
         ))}
+
         {/* Day cells */}
         {days.map((day, idx) => {
           const colorId = day.isCurrentMonth ? dayColors[day.date] : undefined;
@@ -190,19 +237,20 @@ const PrintMonth: React.FC<{
           return (
             <div
               key={idx}
-              className={`aspect-square flex items-center justify-center relative ${day.isCurrentMonth ? '' : 'bg-gray-100'}`}
+              className={`flex items-center justify-center relative ${day.isCurrentMonth ? '' : 'bg-gray-100'}`}
               style={{
                 backgroundColor: colorId || (isWeekend ? '#e0f2fe' : undefined),
                 borderRight: colIdx < 6 ? '1px solid #e5e7eb' : 'none',
                 borderBottom: '1px solid #e5e7eb',
+                fontWeight: dateBold || colorId ? 700 : 400,
               }}
             >
-              <span className={`z-10 leading-none ${colorId ? 'font-bold' : ''}`}>
+              <span className="z-10 leading-none">
                 {day.isCurrentMonth ? parseInt(day.date.split('-')[2]) : ''}
               </span>
               {showCross && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <svg viewBox="0 0 24 24" className="w-full h-full text-black opacity-50 p-0.5">
+                  <svg viewBox="0 0 24 24" className="w-full h-full text-black opacity-50 p-px">
                     <line x1="0" y1="0" x2="24" y2="24" stroke="currentColor" strokeWidth="2" />
                     <line x1="24" y1="0" x2="0" y2="24" stroke="currentColor" strokeWidth="2" />
                   </svg>

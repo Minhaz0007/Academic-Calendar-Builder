@@ -24,6 +24,8 @@ export interface CalendarSettings {
   accentColor: string; // hex color for month header background
   highlightWeekends: boolean; // shade weekend columns
   theme: string; // theme id from themes.ts
+  dateFontSize: number; // font size (px) for day numbers in grid
+  dateBold: boolean; // render day numbers bold
 }
 
 export interface CalendarState {
