@@ -1,21 +1,24 @@
 export interface CalendarTheme {
   id: string;
   name: string;
-  appBg: string;          // Overall page background
-  canvasBg: string;       // Main A4 canvas background
-  accentColor: string;    // Month header & weekday header background
+  appBg: string;           // Overall page background
+  canvasBg: string;        // Main A4 canvas background
+  accentColor: string;     // Month header & weekday header background
   headerTextColor: string; // Text on header cells
-  gridGap: string;        // Color shown in grid gaps between cells
-  borderColor: string;    // Grid outer border
-  dayBg: string;          // Regular day cell background
-  weekendBg: string;      // Weekend cell background (when enabled)
-  nonCurrentBg: string;   // Cells from adjacent months
-  nonCurrentText: string; // Text for adjacent month cells
+  gridGap: string;         // Color shown in grid gaps between cells
+  borderColor: string;     // Grid outer border
+  dayBg: string;           // Regular day cell background
+  weekendBg: string;       // Weekend cell background (when enabled)
+  nonCurrentBg: string;    // Cells from adjacent months
+  nonCurrentText: string;  // Text for adjacent month cells
   monthTitleColor: string; // Month name text color
-  dayText: string;        // Regular day number text
+  dayText: string;         // Regular day number text
+  fontFamily: string;      // CSS font-family stack for the whole calendar
+  cellRadius: string;      // border-radius for individual day cells
 }
 
 export const THEMES: CalendarTheme[] = [
+  // ─── Original themes ──────────────────────────────────────────────────────
   {
     id: 'classic',
     name: 'Classic',
@@ -31,6 +34,8 @@ export const THEMES: CalendarTheme[] = [
     nonCurrentText: '#d1d5db',
     monthTitleColor: '#111827',
     dayText: '#111827',
+    fontFamily: "ui-serif, Georgia, Cambria, 'Times New Roman', serif",
+    cellRadius: '0px',
   },
   {
     id: 'midnight',
@@ -47,6 +52,8 @@ export const THEMES: CalendarTheme[] = [
     nonCurrentText: '#c5cae9',
     monthTitleColor: '#1a237e',
     dayText: '#1a237e',
+    fontFamily: "ui-serif, Georgia, Cambria, 'Times New Roman', serif",
+    cellRadius: '0px',
   },
   {
     id: 'forest',
@@ -63,6 +70,8 @@ export const THEMES: CalendarTheme[] = [
     nonCurrentText: '#c8e6c9',
     monthTitleColor: '#1b5e20',
     dayText: '#1b5e20',
+    fontFamily: "ui-serif, Georgia, Cambria, 'Times New Roman', serif",
+    cellRadius: '0px',
   },
   {
     id: 'parchment',
@@ -79,6 +88,8 @@ export const THEMES: CalendarTheme[] = [
     nonCurrentText: '#d7ccc8',
     monthTitleColor: '#3e2723',
     dayText: '#3e2723',
+    fontFamily: "'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif",
+    cellRadius: '0px',
   },
   {
     id: 'ocean',
@@ -95,6 +106,8 @@ export const THEMES: CalendarTheme[] = [
     nonCurrentText: '#b3e5fc',
     monthTitleColor: '#01579b',
     dayText: '#01579b',
+    fontFamily: "ui-serif, Georgia, Cambria, 'Times New Roman', serif",
+    cellRadius: '0px',
   },
   {
     id: 'rosegold',
@@ -111,6 +124,8 @@ export const THEMES: CalendarTheme[] = [
     nonCurrentText: '#f8bbd0',
     monthTitleColor: '#880e4f',
     dayText: '#880e4f',
+    fontFamily: "ui-serif, Georgia, Cambria, 'Times New Roman', serif",
+    cellRadius: '2px',
   },
   {
     id: 'autumn',
@@ -127,6 +142,155 @@ export const THEMES: CalendarTheme[] = [
     nonCurrentText: '#ffccbc',
     monthTitleColor: '#bf360c',
     dayText: '#bf360c',
+    fontFamily: "ui-serif, Georgia, Cambria, 'Times New Roman', serif",
+    cellRadius: '0px',
+  },
+
+  // ─── New themes ───────────────────────────────────────────────────────────
+
+  {
+    id: 'navygold',
+    name: 'Navy & Gold',
+    appBg: '#e4e0cc',
+    canvasBg: '#fefdf4',
+    accentColor: '#1a2a6c',
+    headerTextColor: '#f0c840',
+    gridGap: '#c8b870',
+    borderColor: '#8b7536',
+    dayBg: '#fefdf4',
+    weekendBg: '#f5f0d0',
+    nonCurrentBg: '#f0ece0',
+    nonCurrentText: '#c8b860',
+    monthTitleColor: '#1a2a6c',
+    dayText: '#1a2a6c',
+    fontFamily: "'Lora', Georgia, 'Times New Roman', serif",
+    cellRadius: '1px',
+  },
+  {
+    id: 'crimson',
+    name: 'Crimson',
+    appBg: '#f0dede',
+    canvasBg: '#fff8f8',
+    accentColor: '#7b0000',
+    headerTextColor: '#ffe0e0',
+    gridGap: '#e8a0a0',
+    borderColor: '#b05050',
+    dayBg: '#fff8f8',
+    weekendBg: '#ffe8e8',
+    nonCurrentBg: '#f8f0f0',
+    nonCurrentText: '#f0b0b0',
+    monthTitleColor: '#5c0000',
+    dayText: '#3d0000',
+    fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif",
+    cellRadius: '0px',
+  },
+  {
+    id: 'slate',
+    name: 'Slate',
+    appBg: '#dde3eb',
+    canvasBg: '#f8fafc',
+    accentColor: '#475569',
+    headerTextColor: '#f1f5f9',
+    gridGap: '#cbd5e1',
+    borderColor: '#94a3b8',
+    dayBg: '#f8fafc',
+    weekendBg: '#e2e8f0',
+    nonCurrentBg: '#f1f5f9',
+    nonCurrentText: '#cbd5e1',
+    monthTitleColor: '#1e293b',
+    dayText: '#1e293b',
+    fontFamily: "'Raleway', 'Trebuchet MS', Arial, sans-serif",
+    cellRadius: '2px',
+  },
+  {
+    id: 'mint',
+    name: 'Mint Fresh',
+    appBg: '#c8e8e0',
+    canvasBg: '#f0faf6',
+    accentColor: '#00796b',
+    headerTextColor: '#e0f2ee',
+    gridGap: '#a7d7cc',
+    borderColor: '#4db6ac',
+    dayBg: '#f0faf6',
+    weekendBg: '#ddf2ec',
+    nonCurrentBg: '#e4f4ef',
+    nonCurrentText: '#b2dfdb',
+    monthTitleColor: '#00352e',
+    dayText: '#004d40',
+    fontFamily: "'Montserrat', 'Gill Sans', Arial, sans-serif",
+    cellRadius: '4px',
+  },
+  {
+    id: 'royal',
+    name: 'Royal Purple',
+    appBg: '#e4daf2',
+    canvasBg: '#fdf8ff',
+    accentColor: '#6a1b9a',
+    headerTextColor: '#f3e5f5',
+    gridGap: '#ce93d8',
+    borderColor: '#9c27b0',
+    dayBg: '#fdf8ff',
+    weekendBg: '#f3e5f5',
+    nonCurrentBg: '#f5eefa',
+    nonCurrentText: '#e1bee7',
+    monthTitleColor: '#4a148c',
+    dayText: '#38006b',
+    fontFamily: "'Lora', Georgia, 'Times New Roman', serif",
+    cellRadius: '2px',
+  },
+  {
+    id: 'graphite',
+    name: 'Graphite',
+    appBg: '#d4d4d4',
+    canvasBg: '#f5f5f5',
+    accentColor: '#212121',
+    headerTextColor: '#eeeeee',
+    gridGap: '#9e9e9e',
+    borderColor: '#616161',
+    dayBg: '#fafafa',
+    weekendBg: '#e8e8e8',
+    nonCurrentBg: '#efefef',
+    nonCurrentText: '#bdbdbd',
+    monthTitleColor: '#212121',
+    dayText: '#212121',
+    fontFamily: "'Raleway', 'Trebuchet MS', Arial, sans-serif",
+    cellRadius: '0px',
+  },
+  {
+    id: 'champagne',
+    name: 'Champagne',
+    appBg: '#ece5d0',
+    canvasBg: '#fefcf2',
+    accentColor: '#a0760a',
+    headerTextColor: '#fff8e1',
+    gridGap: '#d4b896',
+    borderColor: '#c8a068',
+    dayBg: '#fefcf2',
+    weekendBg: '#fdf5dc',
+    nonCurrentBg: '#f5ede8',
+    nonCurrentText: '#e8d0a8',
+    monthTitleColor: '#6b4400',
+    dayText: '#4a3000',
+    fontFamily: "'Playfair Display', 'Palatino Linotype', Georgia, serif",
+    cellRadius: '2px',
+  },
+  {
+    id: 'sky',
+    name: 'Sky Blue',
+    appBg: '#cce5f8',
+    canvasBg: '#f4fbff',
+    accentColor: '#1565c0',
+    headerTextColor: '#ffffff',
+    gridGap: '#90caf9',
+    borderColor: '#64b5f6',
+    dayBg: '#f4fbff',
+    weekendBg: '#e3f2fd',
+    nonCurrentBg: '#ecf6fd',
+    nonCurrentText: '#bbdefb',
+    monthTitleColor: '#0d47a1',
+    dayText: '#0d47a1',
+    fontFamily: "'Montserrat', 'Gill Sans', Arial, sans-serif",
+    cellRadius: '4px',
   },
 ];
 
