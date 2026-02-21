@@ -29,12 +29,39 @@ const DEFAULT_LEGEND: LegendItem[] = [
   { id: '4', color: '#ff99cc', label: 'EID AL-ADHA BREAK', description: 'May 23rd - 31st', style: 'cross' },
 ];
 
-const DEFAULT_DATES: ImportantDate[] = [
-  { id: '1', dateRange: 'Nov 20 - Nov 28: Academic First Term Exams', description: 'November 2025' },
-  { id: '2', dateRange: 'Dec 20 - Dec 30: Winter Break', description: 'December 2025' },
-  { id: '3', dateRange: 'Feb 02 - Feb 14: Islamic Studies Mid Term Exams', description: 'February 2026' },
-  { id: '4', dateRange: 'Mar 04 - Mar 06: Hifz Exams\nMar 13 - Mar 29: Ramadan & Eid al-Fitr Break', description: 'March 2026' },
-];
+const DEFAULT_DATES: ImportantDate[] = [];
+
+// ── Date range helpers for auto Important Dates ────────────────────────────
+const DATE_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function formatDateRange(start: string, end: string): string {
+  const s = new Date(start + 'T00:00:00Z');
+  const e = new Date(end + 'T00:00:00Z');
+  if (start === end) return `${DATE_MONTHS[s.getUTCMonth()]} ${s.getUTCDate()}`;
+  return `${DATE_MONTHS[s.getUTCMonth()]} ${s.getUTCDate()} - ${DATE_MONTHS[e.getUTCMonth()]} ${e.getUTCDate()}`;
+}
+
+function computeDateRangesText(dayColors: Record<string, string>, color: string): string {
+  const dates = Object.keys(dayColors).filter(d => dayColors[d] === color).sort();
+  if (dates.length === 0) return '';
+  const ranges: string[] = [];
+  let start = dates[0];
+  let prev = dates[0];
+  for (let i = 1; i < dates.length; i++) {
+    const diff =
+      (new Date(dates[i] + 'T00:00:00Z').getTime() - new Date(prev + 'T00:00:00Z').getTime()) /
+      86400000;
+    if (diff === 1) {
+      prev = dates[i];
+    } else {
+      ranges.push(formatDateRange(start, prev));
+      start = dates[i];
+      prev = dates[i];
+    }
+  }
+  ranges.push(formatDateRange(start, prev));
+  return ranges.join('\n');
+}
 
 /** Returns the last day of a given month/year as a Date (UTC). */
 function lastDayOfMonth(year: number, month: number): Date {
@@ -93,6 +120,30 @@ function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // ── Auto-sync Important Dates from dayColors + legendItems ─────────────────
+  useEffect(() => {
+    setImportantDates(prev => {
+      // Preserve manually-added entries (no legendItemId)
+      const manual = prev.filter(d => !d.legendItemId);
+      // Build one auto-entry per legend item that has at least one date applied
+      const auto: ImportantDate[] = [];
+      for (const item of legendItems) {
+        const rangeText = computeDateRangesText(dayColors, item.color);
+        if (!rangeText) continue;
+        // Keep any description the user may have customised on this auto-entry
+        const existing = prev.find(d => d.legendItemId === item.id);
+        auto.push({
+          id: `auto-${item.id}`,
+          legendItemId: item.id,
+          description: existing?.description ?? item.label,
+          dateRange: rangeText,
+        });
+      }
+      return [...auto, ...manual];
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayColors, legendItems]);
 
   // ── Persist & restore (Supabase) ───────────────────────────────────────────
   useEffect(() => {
@@ -645,6 +696,7 @@ function App() {
               <ImportantDates
                 dates={importantDates}
                 setDates={setImportantDates}
+                legendItems={legendItems}
               />
             </div>
           </div>

@@ -130,7 +130,7 @@ export const Legend: React.FC<LegendProps> = ({
       </div>
       
       <div className="mt-4 text-xs text-gray-500 print:hidden">
-        <p>Tip: Select a color above, then click dates on the calendar to apply. Shift+Click to select a range.</p>
+        <p>Tip: Select a color above, then click a date to start a range, and click another date to fill it. Click the same date twice to color just that day.</p>
       </div>
     </div>
   );
