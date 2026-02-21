@@ -105,7 +105,7 @@ export const CalendarHeader: React.FC<HeaderProps> = ({
               type="number"
               value={startYear}
               onChange={(e) => setStartYear(parseInt(e.target.value) || new Date().getFullYear())}
-              className="w-16 bg-transparent border-none outline-none text-right font-bold text-2xl print:text-xl print:hidden"
+              className="w-20 bg-transparent border-none outline-none text-right font-bold text-2xl print:text-xl print:hidden"
               style={{ color: headerTextColor }}
             />
             <span className="font-bold text-2xl print:hidden" style={{ color: headerTextColor }}>
