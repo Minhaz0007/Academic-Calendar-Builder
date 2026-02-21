@@ -61,10 +61,17 @@ export const PrintView: React.FC<PrintViewProps> = ({
             {institutionName}
           </div>
           <div
-            className="text-[9px] italic mt-0.5 opacity-85"
+            className="text-[9px] italic mt-0.5 opacity-85 tracking-wide"
             style={{ color: headerTextColor }}
           >
-            {subtitle}
+            {subtitle.split('|').map((part, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && (
+                  <span className="mx-2 opacity-50 not-italic font-light">|</span>
+                )}
+                {part.trim()}
+              </React.Fragment>
+            ))}
           </div>
         </div>
 
