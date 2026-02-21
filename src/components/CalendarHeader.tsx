@@ -42,7 +42,7 @@ export const CalendarHeader: React.FC<HeaderProps> = ({
           <img
             src={effectiveLogo}
             alt="School Logo"
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover"
             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
           />
         </div>
