@@ -158,47 +158,6 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // ── Auto-sync Important Dates from dayColors + legendItems ─────────────────
-  useEffect(() => {
-    setImportantDates(prev => {
-      // Preserve manually-added entries (no legendItemId)
-      const manual = prev.filter(d => !d.legendItemId);
-      // Build one auto-entry per legend item that has at least one date applied
-      const autoWithDate: Array<{ entry: ImportantDate; firstDate: string }> = [];
-      for (const item of legendItems) {
-        const rangeText = computeDateRangesText(dayColors, item.id);
-        if (!rangeText) continue;
-        const existing = prev.find(d => d.legendItemId === item.id);
-        // Preserve user-customised description; otherwise sync with the item label
-        const description = existing?.isDescriptionCustomized
-          ? existing.description
-          : item.label;
-        // Preserve user-customised date range; otherwise sync from calendar colors
-        const dateRange = existing?.isDateRangeCustomized
-          ? existing.dateRange
-          : rangeText;
-        const firstDate = Object.keys(dayColors)
-          .filter(d => dayColors[d] === item.id)
-          .sort()[0] ?? '';
-        autoWithDate.push({
-          entry: {
-            id: `auto-${item.id}`,
-            legendItemId: item.id,
-            description,
-            dateRange,
-            firstDate,
-            isDescriptionCustomized: existing?.isDescriptionCustomized,
-            isDateRangeCustomized: existing?.isDateRangeCustomized,
-          },
-          firstDate,
-        });
-      }
-      // Sort auto entries chronologically by their earliest calendar date
-      autoWithDate.sort((a, b) => a.firstDate.localeCompare(b.firstDate));
-      return [...autoWithDate.map(x => x.entry), ...manual];
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dayColors, legendItems]);
 
   // ── Persist & restore (Supabase) ───────────────────────────────────────────
   useEffect(() => {
@@ -842,6 +801,8 @@ function App() {
                 dates={importantDates}
                 setDates={setImportantDates}
                 legendItems={legendItems}
+                startYear={startYear}
+                startMonth={settings.startMonth}
               />
             </div>
           </div>
@@ -853,6 +814,7 @@ function App() {
         institutionName={institutionName}
         subtitle={subtitle}
         startYear={startYear}
+        startMonth={settings.startMonth}
         logoUrl={logoUrl}
         dayColors={dayColors}
         legendItems={legendItems}

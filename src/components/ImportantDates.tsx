@@ -8,22 +8,29 @@ const MONTH_ABBR_MAP: Record<string, string> = {
   May: 'MAY', Jun: 'JUNE', Jul: 'JULY', Aug: 'AUGUST',
   Sep: 'SEPTEMBER', Oct: 'OCTOBER', Nov: 'NOVEMBER', Dec: 'DECEMBER',
 };
+const MONTH_ABBR_KEYS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const FULL_MONTHS = [
   'JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE',
   'JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER',
 ];
 
-/** Derives a display month label (e.g. "SEPTEMBER") from an ImportantDate entry. */
-function getMonthLabel(date: ImportantDate): string | null {
+/** Returns month+year label like "DECEMBER, 2025" for grouping headers. */
+function getMonthLabel(date: ImportantDate, startMonth: number, startYear: number): string | null {
   // Auto-entries store their earliest calendar date
   if (date.firstDate) {
     const d = new Date(date.firstDate + 'T00:00:00Z');
-    if (!isNaN(d.getTime())) return FULL_MONTHS[d.getUTCMonth()];
+    if (!isNaN(d.getTime())) {
+      return `${FULL_MONTHS[d.getUTCMonth()]}, ${d.getUTCFullYear()}`;
+    }
   }
   // Manual entries: try to parse month abbreviation from the first line of dateRange
   const firstLine = (date.dateRange || '').split('\n')[0].trim();
-  for (const [abbr, full] of Object.entries(MONTH_ABBR_MAP)) {
-    if (firstLine.startsWith(abbr)) return full;
+  for (const abbr of MONTH_ABBR_KEYS) {
+    if (firstLine.startsWith(abbr)) {
+      const monthIdx = MONTH_ABBR_KEYS.indexOf(abbr);
+      const year = monthIdx >= startMonth ? startYear : startYear + 1;
+      return `${MONTH_ABBR_MAP[abbr]}, ${year}`;
+    }
   }
   return null;
 }
@@ -32,9 +39,17 @@ interface ImportantDatesProps {
   dates: ImportantDate[];
   setDates: (dates: ImportantDate[]) => void;
   legendItems?: LegendItem[];
+  startYear: number;
+  startMonth: number;
 }
 
-export const ImportantDates: React.FC<ImportantDatesProps> = ({ dates, setDates, legendItems = [] }) => {
+export const ImportantDates: React.FC<ImportantDatesProps> = ({
+  dates,
+  setDates,
+  legendItems = [],
+  startYear,
+  startMonth,
+}) => {
   const addDate = () => {
     const newDate: ImportantDate = {
       id: crypto.randomUUID(),
@@ -61,7 +76,6 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({ dates, setDates,
   const hasLegend = usedLegendItems.length > 0 || manualColored.length > 0;
 
   // ── Render ───────────────────────────────────────────────────────────────────
-  // prevMonthLabel tracks the last rendered month header so we only show it once per group
   let prevMonthLabel: string | null = null;
 
   return (
@@ -85,13 +99,9 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({ dates, setDates,
         <div className="space-y-0.5 print:space-y-0.5">
           {dates.map((date) => {
             const isAuto = !!date.legendItemId;
-            const legendItem = isAuto
-              ? legendItems.find(i => i.id === date.legendItemId)
-              : undefined;
-            const entryColor = legendItem?.color ?? date.color;
 
             // Month grouping header
-            const monthLabel = getMonthLabel(date);
+            const monthLabel = getMonthLabel(date, startMonth, startYear);
             const showMonthHeader = monthLabel !== null && monthLabel !== prevMonthLabel;
             prevMonthLabel = monthLabel;
 
@@ -108,32 +118,15 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({ dates, setDates,
                 <div className="group flex flex-col gap-0.5 text-xs py-1 print:py-0.5 print:gap-0">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                      {/* Color indicator: dot for auto-entries, picker for manual */}
-                      {isAuto ? (
-                        entryColor && (
-                          <span
-                            className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0 print:w-2 print:h-2"
-                            style={{ backgroundColor: entryColor }}
-                          />
-                        )
-                      ) : (
-                        <>
-                          {/* Color picker (edit view only) */}
-                          <input
-                            type="color"
-                            value={date.color || '#888888'}
-                            onChange={(e) => updateDate(date.id, { color: e.target.value })}
-                            className="w-4 h-4 rounded cursor-pointer border-none p-0 bg-transparent flex-shrink-0 print:hidden"
-                            title="Set legend color"
-                          />
-                          {/* Color dot (print view) */}
-                          {date.color && (
-                            <span
-                              className="hidden print:inline-block w-2 h-2 rounded-sm flex-shrink-0"
-                              style={{ backgroundColor: date.color }}
-                            />
-                          )}
-                        </>
+                      {/* Color picker for manual entries (edit view only, for legend assignment) */}
+                      {!isAuto && (
+                        <input
+                          type="color"
+                          value={date.color || '#888888'}
+                          onChange={(e) => updateDate(date.id, { color: e.target.value })}
+                          className="w-4 h-4 rounded cursor-pointer border-none p-0 bg-transparent flex-shrink-0 print:hidden"
+                          title="Set legend color"
+                        />
                       )}
 
                       <input
@@ -148,15 +141,13 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({ dates, setDates,
                       />
                     </div>
 
-                    {/* Delete button — manual entries only */}
-                    {!isAuto && (
-                      <button
-                        onClick={() => deleteDate(date.id)}
-                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity print:hidden flex-shrink-0"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    )}
+                    {/* Delete button — all entries */}
+                    <button
+                      onClick={() => deleteDate(date.id)}
+                      className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity print:hidden flex-shrink-0"
+                    >
+                      <Trash2 size={12} />
+                    </button>
                   </div>
 
                   {/* Date range */}
@@ -177,7 +168,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({ dates, setDates,
 
           {dates.length === 0 && (
             <p className="text-gray-400 text-sm italic py-4 text-center print:hidden">
-              Apply colors to calendar dates to auto-populate.
+              Click <strong>+</strong> to add events manually.
             </p>
           )}
         </div>
@@ -191,7 +182,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({ dates, setDates,
             {usedLegendItems.map(item => (
               <div key={item.id} className="flex items-center gap-1.5">
                 <span
-                  className="inline-block flex-shrink-0 rounded-sm"
+                  className="inline-block flex-shrink-0"
                   style={{
                     width: '9px', height: '9px',
                     backgroundColor: item.color,
@@ -204,7 +195,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({ dates, setDates,
             {manualColored.map(d => (
               <div key={d.id} className="flex items-center gap-1.5">
                 <span
-                  className="inline-block flex-shrink-0 rounded-sm"
+                  className="inline-block flex-shrink-0"
                   style={{
                     width: '9px', height: '9px',
                     backgroundColor: d.color,
