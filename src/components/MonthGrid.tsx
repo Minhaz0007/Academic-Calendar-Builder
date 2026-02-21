@@ -151,7 +151,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
                 fontWeight: dateBold || colorId ? 700 : 500,
               }}
             >
-              <span className="relative z-10">
+              <span className="relative z-10 tabular-nums">
                 {day.isCurrentMonth ? parseInt(day.date.split('-')[2]) : ''}
               </span>
               {showCross && (

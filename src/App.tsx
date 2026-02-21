@@ -131,20 +131,32 @@ function App() {
       // Preserve manually-added entries (no legendItemId)
       const manual = prev.filter(d => !d.legendItemId);
       // Build one auto-entry per legend item that has at least one date applied
-      const auto: ImportantDate[] = [];
+      const autoWithDate: Array<{ entry: ImportantDate; firstDate: string }> = [];
       for (const item of legendItems) {
         const rangeText = computeDateRangesText(dayColors, item.color);
         if (!rangeText) continue;
-        // Keep any description the user may have customised on this auto-entry
         const existing = prev.find(d => d.legendItemId === item.id);
-        auto.push({
-          id: `auto-${item.id}`,
-          legendItemId: item.id,
-          description: existing?.description ?? item.label,
-          dateRange: rangeText,
+        // Only keep user-customised description; otherwise always sync with the item label
+        const description = existing?.isDescriptionCustomized
+          ? existing.description
+          : item.label;
+        const firstDate = Object.keys(dayColors)
+          .filter(d => dayColors[d] === item.color)
+          .sort()[0] ?? '';
+        autoWithDate.push({
+          entry: {
+            id: `auto-${item.id}`,
+            legendItemId: item.id,
+            description,
+            dateRange: rangeText,
+            isDescriptionCustomized: existing?.isDescriptionCustomized,
+          },
+          firstDate,
         });
       }
-      return [...auto, ...manual];
+      // Sort auto entries chronologically by their earliest calendar date
+      autoWithDate.sort((a, b) => a.firstDate.localeCompare(b.firstDate));
+      return [...autoWithDate.map(x => x.entry), ...manual];
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dayColors, legendItems]);

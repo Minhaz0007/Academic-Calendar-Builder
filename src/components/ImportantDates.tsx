@@ -57,7 +57,10 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({ dates, setDates,
                   <input
                     type="text"
                     value={date.description}
-                    onChange={(e) => updateDate(date.id, { description: e.target.value })}
+                    onChange={(e) => updateDate(date.id, {
+                      description: e.target.value,
+                      ...(isAuto ? { isDescriptionCustomized: true } : {}),
+                    })}
                     className="font-bold text-gray-900 bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none w-full print:text-[10px]"
                     placeholder="Month / Event Group"
                   />
