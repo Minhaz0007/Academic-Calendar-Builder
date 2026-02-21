@@ -862,6 +862,7 @@ function App() {
         dateFontSize={settings.dateFontSize ?? 14}
         dateBold={settings.dateBold ?? false}
         headerTextColor={activeTheme.headerTextColor}
+        theme={activeTheme}
       />
 
       <style>{`

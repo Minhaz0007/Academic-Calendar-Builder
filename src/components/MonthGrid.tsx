@@ -73,7 +73,10 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
   };
 
   return (
-    <div className="break-inside-avoid font-serif">
+    <div
+      className="break-inside-avoid"
+      style={{ fontFamily: theme?.fontFamily ?? "ui-serif, Georgia, serif" }}
+    >
       <h4
         className="font-bold text-center mb-1 uppercase tracking-wider text-sm"
         style={{ color: theme?.monthTitleColor ?? '#111827' }}
@@ -150,6 +153,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
                 backgroundColor: bgColor,
                 color: textColor,
                 fontWeight: dateBold || colorId ? 700 : 500,
+                borderRadius: theme?.cellRadius ?? '0px',
               }}
             >
               <span className="relative z-10 tabular-nums">
