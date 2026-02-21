@@ -89,12 +89,8 @@ export const Legend: React.FC<LegendProps> = ({
                 placeholder="Category Name"
               />
 
-              {/* Print View: Description/Date Area */}
-              <div className="hidden print:block px-1 py-0.5 w-2/3 leading-tight">
-                 <span className="italic">{item.description || '...'}</span>
-              </div>
             </div>
-            
+
             <div className="flex items-center gap-1 print:hidden">
               <input
                 type="checkbox"
@@ -105,15 +101,6 @@ export const Legend: React.FC<LegendProps> = ({
               />
               <span className="text-xs text-gray-500 print:hidden">X</span>
             </div>
-
-            {/* Editable Description for Print View (Visible in UI) */}
-            <input 
-                type="text"
-                value={item.description || ''}
-                onChange={(e) => updateItem(item.id, { description: e.target.value })}
-                className="text-xs text-gray-500 border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none print:hidden ml-2 w-32"
-                placeholder="Date/Details (for print)"
-            />
             
             <button
               onClick={(e) => {
