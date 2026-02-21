@@ -695,6 +695,7 @@ function App() {
             headerTextColor={activeTheme.headerTextColor}
           />
 
+
           <div className="grid grid-cols-1 lg:grid-cols-[3fr_1fr] gap-8 h-full">
             <div className="flex flex-col h-full">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-6 flex-grow">
