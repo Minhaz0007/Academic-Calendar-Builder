@@ -37,6 +37,29 @@ export const PrintView: React.FC<PrintViewProps> = ({
 }) => {
   const cols = months.length <= 6 ? 3 : months.length <= 9 ? 3 : 4;
 
+  // ── Month grouping for Important Dates sidebar ──────────────────────────
+  const MONTH_FULL = ['January','February','March','April','May','June',
+    'July','August','September','October','November','December'];
+
+  const idGroupMap = new Map<string, ImportantDate[]>();
+  const idUngrouped: ImportantDate[] = [];
+  for (const d of importantDates) {
+    if (d.sortDate) {
+      const key = d.sortDate.slice(0, 7);
+      if (!idGroupMap.has(key)) idGroupMap.set(key, []);
+      idGroupMap.get(key)!.push(d);
+    } else {
+      idUngrouped.push(d);
+    }
+  }
+  const idGroups = [...idGroupMap.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, entries]) => {
+      const [y, m] = key.split('-').map(Number);
+      return { key, label: `${MONTH_FULL[m]} ${y}`, entries };
+    });
+  if (idUngrouped.length > 0) idGroups.push({ key: '__other', label: 'Other', entries: idUngrouped });
+
   return (
     <div
       className="hidden print:flex print:flex-col w-full h-screen bg-white text-black overflow-hidden box-border"
@@ -125,47 +148,72 @@ export const PrintView: React.FC<PrintViewProps> = ({
           <h3 className="text-[11px] font-bold uppercase border-b-2 border-black mb-1.5 pb-0.5 flex-shrink-0 tracking-wider">
             Important Dates
           </h3>
-          <div className="space-y-2 text-[10px] flex-1">
-            {importantDates.map(date => {
-              const legendItem = date.legendItemId
-                ? legendItems.find(i => i.id === date.legendItemId)
-                : undefined;
-              return (
-                <div key={date.id}>
-                  {/* Description row with color dot */}
-                  <div className="flex items-center gap-1.5 leading-tight">
-                    {legendItem ? (
-                      <span
-                        className="inline-block flex-shrink-0 rounded-full"
-                        style={{
-                          width: '9px',
-                          height: '9px',
-                          minWidth: '9px',
-                          backgroundColor: legendItem.color,
-                          border: '0.5px solid rgba(0,0,0,0.3)',
-                        }}
-                      />
-                    ) : (
-                      <span
-                        className="inline-block flex-shrink-0 rounded-full bg-gray-400"
-                        style={{ width: '6px', height: '6px', minWidth: '6px' }}
-                      />
-                    )}
-                    <span className="font-bold uppercase text-[10px] leading-tight">
-                      {date.description}
-                    </span>
-                  </div>
-                  {/* Date range indented under the dot */}
-                  <div
-                    className="whitespace-pre-wrap leading-snug text-gray-700 text-[9px] mt-0.5"
-                    style={{ paddingLeft: '13px' }}
-                  >
-                    {date.dateRange}
-                  </div>
+
+          {/* Month-grouped entries */}
+          <div className="flex-1 space-y-1.5">
+            {idGroups.map(group => (
+              <div key={group.key}>
+                {/* Month header */}
+                <div
+                  className="text-[9.5px] font-bold italic mb-0.5 leading-tight tracking-wide"
+                  style={{ color: accentColor === '#a5f3fc' ? '#374151' : accentColor }}
+                >
+                  {group.label}
                 </div>
-              );
-            })}
+                {group.entries.map(date => {
+                  const legendItem = date.legendItemId
+                    ? legendItems.find(i => i.id === date.legendItemId)
+                    : undefined;
+                  const dotColor = date.color || legendItem?.color;
+                  return (
+                    <div key={date.id} className="flex items-start gap-1 mb-0.5 leading-snug">
+                      {dotColor && (
+                        <span
+                          className="inline-block flex-shrink-0 rounded-sm mt-[2px]"
+                          style={{
+                            width: '8px', height: '8px', minWidth: '8px',
+                            backgroundColor: dotColor,
+                            border: '0.5px solid rgba(0,0,0,0.25)',
+                          }}
+                        />
+                      )}
+                      <span className="text-[9px]">
+                        {date.dateRange && (
+                          <span className="text-gray-500">{date.dateRange}: </span>
+                        )}
+                        <span className="font-semibold">{date.description}</span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </div>
+
+          {/* Color legend at bottom */}
+          {legendItems.length > 0 && (
+            <div className="border-t-2 border-black pt-1 mt-1 flex-shrink-0">
+              <div className="text-[8px] font-bold uppercase tracking-wider mb-0.5">Color Key</div>
+              <div className="space-y-0.5">
+                {legendItems.map(item => (
+                  <div key={item.id} className="flex items-center gap-1 text-[8px] leading-tight">
+                    <span
+                      className="inline-block flex-shrink-0"
+                      style={{
+                        width: '10px', height: '9px',
+                        backgroundColor: item.color,
+                        border: '0.5px solid rgba(0,0,0,0.3)',
+                      }}
+                    />
+                    <span className="font-semibold uppercase">{item.label}</span>
+                    {item.description && (
+                      <span className="text-gray-500 truncate">— {item.description}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

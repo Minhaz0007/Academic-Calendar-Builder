@@ -15,9 +15,11 @@ export interface ImportantDate {
   id: string;
   dateRange: string;
   description: string;
-  legendItemId?: string; // set on auto-generated entries; undefined for manual entries
-  isDescriptionCustomized?: boolean; // true when user has manually edited the auto-entry description
-  isDateRangeCustomized?: boolean;   // true when user has manually edited the auto-entry date range
+  legendItemId?: string;
+  isDescriptionCustomized?: boolean;
+  isDateRangeCustomized?: boolean;
+  sortDate?: string;  // YYYY-MM-DD: first date of this entry (used for month grouping)
+  color?: string;     // custom color hex for manual entries
 }
 
 export interface CalendarSettings {

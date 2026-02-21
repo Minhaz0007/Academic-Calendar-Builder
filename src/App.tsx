@@ -188,6 +188,7 @@ function App() {
             dateRange,
             isDescriptionCustomized: existing?.isDescriptionCustomized,
             isDateRangeCustomized: existing?.isDateRangeCustomized,
+            sortDate: firstDate || existing?.sortDate,
           },
           firstDate,
         });
