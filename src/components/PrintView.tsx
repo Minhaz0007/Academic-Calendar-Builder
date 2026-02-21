@@ -2,6 +2,29 @@ import React from 'react';
 import { CalendarDay, LegendItem, ImportantDate } from '../types';
 import { CalendarTheme } from '../themes';
 
+// ── Month helpers (mirrors ImportantDates.tsx) ─────────────────────────────────
+const MONTH_ABBR_MAP: Record<string, string> = {
+  Jan: 'JANUARY', Feb: 'FEBRUARY', Mar: 'MARCH', Apr: 'APRIL',
+  May: 'MAY', Jun: 'JUNE', Jul: 'JULY', Aug: 'AUGUST',
+  Sep: 'SEPTEMBER', Oct: 'OCTOBER', Nov: 'NOVEMBER', Dec: 'DECEMBER',
+};
+const FULL_MONTHS = [
+  'JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE',
+  'JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER',
+];
+
+function getMonthLabel(date: ImportantDate): string | null {
+  if (date.firstDate) {
+    const d = new Date(date.firstDate + 'T00:00:00Z');
+    if (!isNaN(d.getTime())) return FULL_MONTHS[d.getUTCMonth()];
+  }
+  const firstLine = (date.dateRange || '').split('\n')[0].trim();
+  for (const [abbr, full] of Object.entries(MONTH_ABBR_MAP)) {
+    if (firstLine.startsWith(abbr)) return full;
+  }
+  return null;
+}
+
 interface PrintViewProps {
   institutionName: string;
   subtitle: string;
@@ -125,47 +148,107 @@ export const PrintView: React.FC<PrintViewProps> = ({
           <h3 className="text-[11px] font-bold uppercase border-b-2 border-black mb-1.5 pb-0.5 flex-shrink-0 tracking-wider">
             Important Dates
           </h3>
-          <div className="space-y-2 text-[10px] flex-1">
-            {importantDates.map(date => {
-              const legendItem = date.legendItemId
-                ? legendItems.find(i => i.id === date.legendItemId)
-                : undefined;
-              return (
-                <div key={date.id}>
-                  {/* Description row with color dot */}
-                  <div className="flex items-center gap-1.5 leading-tight">
-                    {legendItem ? (
+
+          {/* Entries with month-label grouping */}
+          <div className="flex-1 overflow-hidden">
+            {(() => {
+              let prevMonth: string | null = null;
+              return importantDates.map(date => {
+                const legendItem = date.legendItemId
+                  ? legendItems.find(i => i.id === date.legendItemId)
+                  : undefined;
+                const entryColor = legendItem?.color ?? date.color;
+
+                const monthLabel = getMonthLabel(date);
+                const showMonthHeader = monthLabel !== null && monthLabel !== prevMonth;
+                prevMonth = monthLabel;
+
+                return (
+                  <React.Fragment key={date.id}>
+                    {/* Month section header */}
+                    {showMonthHeader && (
+                      <div className="text-[7px] font-bold uppercase tracking-widest text-gray-500 border-b border-gray-400 pt-1.5 pb-px mt-0.5 first:mt-0 leading-tight">
+                        {monthLabel}
+                      </div>
+                    )}
+
+                    <div className="mt-0.5">
+                      {/* Description row with color dot */}
+                      <div className="flex items-center gap-1.5 leading-tight">
+                        {entryColor ? (
+                          <span
+                            className="inline-block flex-shrink-0 rounded-sm"
+                            style={{
+                              width: '8px', height: '8px', minWidth: '8px',
+                              backgroundColor: entryColor,
+                              border: '0.5px solid rgba(0,0,0,0.3)',
+                            }}
+                          />
+                        ) : (
+                          <span
+                            className="inline-block flex-shrink-0 rounded-full bg-gray-400"
+                            style={{ width: '6px', height: '6px', minWidth: '6px' }}
+                          />
+                        )}
+                        <span className="font-bold uppercase text-[9px] leading-tight">
+                          {date.description}
+                        </span>
+                      </div>
+                      {/* Date range */}
+                      <div
+                        className="whitespace-pre-wrap leading-snug text-gray-700 text-[8px] mt-px"
+                        style={{ paddingLeft: '12px' }}
+                      >
+                        {date.dateRange}
+                      </div>
+                    </div>
+                  </React.Fragment>
+                );
+              });
+            })()}
+          </div>
+
+          {/* Legend at bottom of Important Dates */}
+          {(() => {
+            const usedLegendItems = legendItems.filter(item =>
+              importantDates.some(d => d.legendItemId === item.id)
+            );
+            const manualColored = importantDates.filter(d => !d.legendItemId && d.color);
+            if (usedLegendItems.length === 0 && manualColored.length === 0) return null;
+            return (
+              <div className="flex-shrink-0 border-t-2 border-black mt-1.5 pt-1">
+                <div className="text-[7px] font-bold uppercase tracking-widest mb-0.5">Legend</div>
+                <div className="flex flex-col gap-0.5">
+                  {usedLegendItems.map(item => (
+                    <div key={item.id} className="flex items-center gap-1">
                       <span
-                        className="inline-block flex-shrink-0 rounded-full"
+                        className="inline-block flex-shrink-0 rounded-sm"
                         style={{
-                          width: '9px',
-                          height: '9px',
-                          minWidth: '9px',
-                          backgroundColor: legendItem.color,
-                          border: '0.5px solid rgba(0,0,0,0.3)',
+                          width: '8px', height: '8px', minWidth: '8px',
+                          backgroundColor: item.color,
+                          border: '0.5px solid rgba(0,0,0,0.25)',
                         }}
                       />
-                    ) : (
+                      <span className="text-[7px] uppercase font-medium leading-tight">{item.label}</span>
+                    </div>
+                  ))}
+                  {manualColored.map(d => (
+                    <div key={d.id} className="flex items-center gap-1">
                       <span
-                        className="inline-block flex-shrink-0 rounded-full bg-gray-400"
-                        style={{ width: '6px', height: '6px', minWidth: '6px' }}
+                        className="inline-block flex-shrink-0 rounded-sm"
+                        style={{
+                          width: '8px', height: '8px', minWidth: '8px',
+                          backgroundColor: d.color,
+                          border: '0.5px solid rgba(0,0,0,0.25)',
+                        }}
                       />
-                    )}
-                    <span className="font-bold uppercase text-[10px] leading-tight">
-                      {date.description}
-                    </span>
-                  </div>
-                  {/* Date range indented under the dot */}
-                  <div
-                    className="whitespace-pre-wrap leading-snug text-gray-700 text-[9px] mt-0.5"
-                    style={{ paddingLeft: '13px' }}
-                  >
-                    {date.dateRange}
-                  </div>
+                      <span className="text-[7px] uppercase font-medium leading-tight">{d.description}</span>
+                    </div>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

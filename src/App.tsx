@@ -186,6 +186,7 @@ function App() {
             legendItemId: item.id,
             description,
             dateRange,
+            firstDate,
             isDescriptionCustomized: existing?.isDescriptionCustomized,
             isDateRangeCustomized: existing?.isDateRangeCustomized,
           },
