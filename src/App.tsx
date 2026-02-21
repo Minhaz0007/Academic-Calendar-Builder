@@ -20,17 +20,17 @@ const DEFAULT_SETTINGS: CalendarSettings = {
 const STORAGE_KEY = 'academicCalendarState_v2';
 
 const DEFAULT_LEGEND: LegendItem[] = [
-  { id: '1', color: '#00ff00', label: 'FIRST DAY OF SCHOOL', description: 'September 3rd' },
-  { id: '2', color: '#ff0000', label: 'WINTER BREAK', description: 'Dec 20th - Dec 30th' },
-  { id: '3', color: '#ff6600', label: 'SUMMER BREAK', description: 'August 7th - September 1st' },
-  { id: '4', color: '#ff99cc', label: 'EID AL-ADHA BREAK', description: 'May 23rd - 31st' },
+  { id: '1', color: '#00ff00', label: 'FIRST DAY OF SCHOOL', description: 'September 3rd', style: 'cross' },
+  { id: '2', color: '#ff0000', label: 'WINTER BREAK', description: 'Dec 20th - Dec 30th', style: 'cross' },
+  { id: '3', color: '#ff6600', label: 'SUMMER BREAK', description: 'August 7th - September 1st', style: 'cross' },
+  { id: '4', color: '#ff99cc', label: 'EID AL-ADHA BREAK', description: 'May 23rd - 31st', style: 'cross' },
 ];
 
 const DEFAULT_DATES: ImportantDate[] = [
   { id: '1', dateRange: 'Nov 20 - Nov 28: Academic First Term Exams', description: 'November 2025' },
   { id: '2', dateRange: 'Dec 20 - Dec 30: Winter Break', description: 'December 2025' },
   { id: '3', dateRange: 'Feb 02 - Feb 14: Islamic Studies Mid Term Exams', description: 'February 2026' },
-  { id: '4', dateRange: 'Mar 04 - Mar 06: Hifz Exams\nMar 07 - Mar 24: Ramadan & Eid al-Fitr Break', description: 'March 2026' },
+  { id: '4', dateRange: 'Mar 04 - Mar 06: Hifz Exams\nMar 13 - Mar 29: Ramadan & Eid al-Fitr Break', description: 'March 2026' },
 ];
 
 /** Returns the last day of a given month/year as a Date (UTC). */
