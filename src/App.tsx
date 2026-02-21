@@ -7,7 +7,7 @@ import { PrintView } from './components/PrintView';
 import { LegendItem, ImportantDate, CalendarSettings } from './types';
 import { supabase, getSessionKey } from './lib/supabase';
 import { THEMES, getTheme } from './themes';
-import { Printer, Undo2, Redo2, Eraser, Download, Upload, Settings, ChevronDown } from 'lucide-react';
+import { Printer, Undo2, Redo2, Eraser, Download, Upload, Settings, ChevronDown, CloudUpload, Check, AlertCircle } from 'lucide-react';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -18,7 +18,7 @@ const DEFAULT_SETTINGS: CalendarSettings = {
   accentColor: '#a5f3fc',
   highlightWeekends: false,
   theme: 'classic',
-  dateFontSize: 10,
+  dateFontSize: 14,
   dateBold: false,
 };
 
@@ -106,6 +106,8 @@ function App() {
   // Undo / Redo stack
   const [colorHistory, setColorHistory] = useState<Record<string, string>[]>([{}]);
   const [historyIndex, setHistoryIndex] = useState(0);
+
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const importRef = useRef<HTMLInputElement>(null);
 
@@ -343,6 +345,30 @@ function App() {
     e.target.value = '';
   };
 
+  // ── Manual Save ────────────────────────────────────────────────────────────
+  const handleSave = async () => {
+    setSaveStatus('saving');
+    try {
+      const { error } = await supabase.from('calendars').upsert({
+        session_key:      getSessionKey(),
+        institution_name: institutionName,
+        subtitle,
+        logo_url:         logoUrl,
+        start_year:       startYear,
+        settings,
+        day_colors:       dayColors,
+        legend_items:     legendItems,
+        important_dates:  importantDates,
+      }, { onConflict: 'session_key' });
+      if (error) throw error;
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2500);
+    } catch {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    }
+  };
+
   // ── Generate months ────────────────────────────────────────────────────────
   const months = Array.from({ length: settings.numMonths }, (_, i) => {
     const d = new Date(startYear, settings.startMonth + i, 1);
@@ -526,6 +552,31 @@ function App() {
                   <ChevronDown size={11} className={`transition-transform ${showSettings ? 'rotate-180' : ''}`} />
                 </button>
 
+                <button
+                  onClick={handleSave}
+                  disabled={saveStatus === 'saving'}
+                  title="Save to cloud"
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all disabled:cursor-not-allowed ${
+                    saveStatus === 'saved'
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : saveStatus === 'error'
+                      ? 'bg-red-500 text-white hover:bg-red-600'
+                      : saveStatus === 'saving'
+                      ? 'bg-blue-400 text-white'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  {saveStatus === 'saved' ? (
+                    <><Check size={16} /> Saved!</>
+                  ) : saveStatus === 'error' ? (
+                    <><AlertCircle size={16} /> Error</>
+                  ) : saveStatus === 'saving' ? (
+                    <><CloudUpload size={16} className="animate-pulse" /> Saving…</>
+                  ) : (
+                    <><CloudUpload size={16} /> Save</>
+                  )}
+                </button>
+
                 <button onClick={() => window.print()}
                   className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition-colors">
                   <Printer size={17} /> Print / Save PDF
@@ -637,11 +688,11 @@ function App() {
                     min={7}
                     max={16}
                     step={1}
-                    value={settings.dateFontSize ?? 10}
+                    value={settings.dateFontSize ?? 14}
                     onChange={(e) => setSettings(s => ({ ...s, dateFontSize: parseInt(e.target.value) }))}
                     className="w-24 accent-blue-600"
                   />
-                  <span className="text-xs text-gray-500 w-6">{settings.dateFontSize ?? 10}px</span>
+                  <span className="text-xs text-gray-500 w-6">{settings.dateFontSize ?? 14}px</span>
                 </div>
 
                 {/* Date bold */}
@@ -658,7 +709,7 @@ function App() {
                   </label>
                 </div>
 
-                <span className="text-xs text-gray-400 ml-auto italic">All changes auto-saved</span>
+                <span className="text-xs text-gray-400 ml-auto italic">Use the Save button to persist changes to the cloud</span>
               </div>
             </div>
           )}
@@ -714,7 +765,7 @@ function App() {
                     hoveredDate={hoveredDate}
                     previewColor={previewColor}
                     theme={activeTheme}
-                    dateFontSize={settings.dateFontSize ?? 10}
+                    dateFontSize={settings.dateFontSize ?? 14}
                     dateBold={settings.dateBold ?? false}
                   />
                 ))}
@@ -753,7 +804,7 @@ function App() {
         months={months}
         accentColor={effectiveAccent}
         highlightWeekends={settings.highlightWeekends}
-        dateFontSize={settings.dateFontSize ?? 10}
+        dateFontSize={settings.dateFontSize ?? 14}
         dateBold={settings.dateBold ?? false}
         headerTextColor={activeTheme.headerTextColor}
       />
