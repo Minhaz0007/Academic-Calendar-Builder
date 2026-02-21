@@ -5,6 +5,7 @@ import { ImportantDates } from './components/ImportantDates';
 import { MonthGrid } from './components/MonthGrid';
 import { PrintView } from './components/PrintView';
 import { LegendItem, ImportantDate, CalendarSettings } from './types';
+import { supabase, getSessionKey } from './lib/supabase';
 import { Printer, Undo2, Redo2, Eraser, Download, Upload, Settings, ChevronDown } from 'lucide-react';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -74,36 +75,49 @@ function App() {
 
   const importRef = useRef<HTMLInputElement>(null);
 
-  // ── Persist & restore ──────────────────────────────────────────────────────
+  // ── Persist & restore (Supabase) ───────────────────────────────────────────
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const s = JSON.parse(saved);
-        if (typeof s.startYear === 'number') setStartYear(s.startYear);
-        if (typeof s.institutionName === 'string') setInstitutionName(s.institutionName);
-        if (typeof s.subtitle === 'string') setSubtitle(s.subtitle);
-        if (typeof s.logoUrl === 'string') setLogoUrl(s.logoUrl);
-        if (s.dayColors && typeof s.dayColors === 'object') {
-          setDayColors(s.dayColors);
-          setColorHistory([s.dayColors]);
+    const load = async () => {
+      const { data } = await supabase
+        .from('calendars')
+        .select('*')
+        .eq('session_key', getSessionKey())
+        .maybeSingle();
+      if (data) {
+        if (typeof data.start_year === 'number') setStartYear(data.start_year);
+        if (typeof data.institution_name === 'string') setInstitutionName(data.institution_name);
+        if (typeof data.subtitle === 'string') setSubtitle(data.subtitle);
+        if (typeof data.logo_url === 'string') setLogoUrl(data.logo_url);
+        if (data.day_colors && typeof data.day_colors === 'object') {
+          setDayColors(data.day_colors);
+          setColorHistory([data.day_colors]);
         }
-        if (Array.isArray(s.legendItems)) setLegendItems(s.legendItems);
-        if (Array.isArray(s.importantDates)) setImportantDates(s.importantDates);
-        if (s.settings && typeof s.settings === 'object') {
-          setSettings(prev => ({ ...DEFAULT_SETTINGS, ...s.settings }));
+        if (Array.isArray(data.legend_items)) setLegendItems(data.legend_items);
+        if (Array.isArray(data.important_dates)) setImportantDates(data.important_dates);
+        if (data.settings && typeof data.settings === 'object') {
+          setSettings(prev => ({ ...DEFAULT_SETTINGS, ...data.settings }));
         }
       }
-    } catch { /* ignore */ }
+    };
+    load();
   }, []);
 
+  // Debounced auto-save — waits 1 s after last change before writing to Supabase
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        startYear, institutionName, subtitle, logoUrl,
-        dayColors, legendItems, importantDates, settings,
-      }));
-    } catch { /* ignore quota errors */ }
+    const timer = setTimeout(async () => {
+      await supabase.from('calendars').upsert({
+        session_key:      getSessionKey(),
+        institution_name: institutionName,
+        subtitle,
+        logo_url:         logoUrl,
+        start_year:       startYear,
+        settings,
+        day_colors:       dayColors,
+        legend_items:     legendItems,
+        important_dates:  importantDates,
+      }, { onConflict: 'session_key' });
+    }, 1000);
+    return () => clearTimeout(timer);
   }, [startYear, institutionName, subtitle, logoUrl, dayColors, legendItems, importantDates, settings]);
 
   // ── Undo / Redo ────────────────────────────────────────────────────────────
