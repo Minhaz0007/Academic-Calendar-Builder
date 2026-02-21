@@ -34,7 +34,7 @@ export interface CalendarState {
   startMonth: number; // 0-11
   institutionName: string;
   logoUrl: string | null;
-  dayColors: Record<string, string>; // date -> color hex
+  dayColors: Record<string, string>; // date -> legendItemId
   legend: LegendItem[];
   importantDates: ImportantDate[];
 }

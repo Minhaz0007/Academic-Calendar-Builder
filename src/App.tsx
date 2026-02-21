@@ -43,8 +43,8 @@ function formatDateRange(start: string, end: string): string {
   return `${DATE_MONTHS[s.getUTCMonth()]} ${s.getUTCDate()} - ${DATE_MONTHS[e.getUTCMonth()]} ${e.getUTCDate()}`;
 }
 
-function computeDateRangesText(dayColors: Record<string, string>, color: string): string {
-  const dates = Object.keys(dayColors).filter(d => dayColors[d] === color).sort();
+function computeDateRangesText(dayColors: Record<string, string>, legendItemId: string): string {
+  const dates = Object.keys(dayColors).filter(d => dayColors[d] === legendItemId).sort();
   if (dates.length === 0) return '';
   const ranges: string[] = [];
   let start = dates[0];
@@ -68,6 +68,28 @@ function computeDateRangesText(dayColors: Record<string, string>, color: string)
 /** Returns the last day of a given month/year as a Date (UTC). */
 function lastDayOfMonth(year: number, month: number): Date {
   return new Date(Date.UTC(year, month + 1, 0));
+}
+
+/**
+ * Migrates legacy dayColors (date → hexColor) to the current format
+ * (date → legendItemId). Values that already look like IDs are left untouched.
+ */
+function migrateDayColors(
+  raw: Record<string, string>,
+  items: LegendItem[],
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [date, value] of Object.entries(raw)) {
+    if (value.startsWith('#')) {
+      // Old format: find the matching legend item by color
+      const item = items.find(i => i.color === value);
+      if (item) result[date] = item.id;
+      // Dates with no matching legend item are dropped (color was deleted)
+    } else {
+      result[date] = value;
+    }
+  }
+  return result;
 }
 
 function App() {
@@ -133,7 +155,7 @@ function App() {
       // Build one auto-entry per legend item that has at least one date applied
       const autoWithDate: Array<{ entry: ImportantDate; firstDate: string }> = [];
       for (const item of legendItems) {
-        const rangeText = computeDateRangesText(dayColors, item.color);
+        const rangeText = computeDateRangesText(dayColors, item.id);
         if (!rangeText) continue;
         const existing = prev.find(d => d.legendItemId === item.id);
         // Only keep user-customised description; otherwise always sync with the item label
@@ -141,7 +163,7 @@ function App() {
           ? existing.description
           : item.label;
         const firstDate = Object.keys(dayColors)
-          .filter(d => dayColors[d] === item.color)
+          .filter(d => dayColors[d] === item.id)
           .sort()[0] ?? '';
         autoWithDate.push({
           entry: {
@@ -174,11 +196,15 @@ function App() {
         if (typeof data.institution_name === 'string') setInstitutionName(data.institution_name);
         if (typeof data.subtitle === 'string') setSubtitle(data.subtitle);
         if (typeof data.logo_url === 'string') setLogoUrl(data.logo_url);
+        const loadedItems: LegendItem[] = Array.isArray(data.legend_items)
+          ? data.legend_items
+          : DEFAULT_LEGEND;
+        if (Array.isArray(data.legend_items)) setLegendItems(loadedItems);
         if (data.day_colors && typeof data.day_colors === 'object') {
-          setDayColors(data.day_colors);
-          setColorHistory([data.day_colors]);
+          const migrated = migrateDayColors(data.day_colors, loadedItems);
+          setDayColors(migrated);
+          setColorHistory([migrated]);
         }
-        if (Array.isArray(data.legend_items)) setLegendItems(data.legend_items);
         if (Array.isArray(data.important_dates)) setImportantDates(data.important_dates);
         if (data.settings && typeof data.settings === 'object') {
           setSettings(prev => ({ ...DEFAULT_SETTINGS, ...data.settings }));
@@ -236,7 +262,7 @@ function App() {
     base: Record<string, string>,
     fromISO: string,
     toISO: string,
-    color: string,
+    legendItemId: string,
   ): Record<string, string> => {
     const a = new Date(fromISO + 'T00:00:00Z');
     const b = new Date(toISO + 'T00:00:00Z');
@@ -247,7 +273,7 @@ function App() {
     const cur = new Date(s);
     let guard = 0;
     while (cur <= e && guard < 1000) {
-      result[cur.toISOString().split('T')[0]] = color;
+      result[cur.toISOString().split('T')[0]] = legendItemId;
       cur.setUTCDate(cur.getUTCDate() + 1);
       guard++;
     }
@@ -259,7 +285,7 @@ function App() {
     if (!rangeStart || !rangeEnd || !selectedColorId) return;
     const item = legendItems.find(i => i.id === selectedColorId);
     if (!item) return;
-    pushToHistory(fillRange(dayColors, rangeStart, rangeEnd, item.color));
+    pushToHistory(fillRange(dayColors, rangeStart, rangeEnd, item.id));
   };
 
   const handleMonthRangeApply = () => {
@@ -272,7 +298,7 @@ function App() {
     const lastDay = lastDayOfMonth(mrEndYear, mrEndMonth);
     const toISO = lastDay.toISOString().split('T')[0];
 
-    pushToHistory(fillRange(dayColors, fromISO, toISO, item.color));
+    pushToHistory(fillRange(dayColors, fromISO, toISO, item.id));
   };
 
   // ── Click-click range selection ────────────────────────────────────────────
@@ -289,15 +315,15 @@ function App() {
       if (date === pendingRangeStart) {
         // Same date clicked: toggle single day
         const newColors = { ...dayColors };
-        if (newColors[date] === item.color) {
+        if (newColors[date] === item.id) {
           delete newColors[date];
         } else {
-          newColors[date] = item.color;
+          newColors[date] = item.id;
         }
         pushToHistory(newColors);
       } else {
         // Different date: fill range
-        pushToHistory(fillRange(dayColors, pendingRangeStart, date, item.color));
+        pushToHistory(fillRange(dayColors, pendingRangeStart, date, item.id));
       }
       setPendingRangeStart(null);
     }
@@ -306,11 +332,9 @@ function App() {
   // ── Clear handlers ─────────────────────────────────────────────────────────
   const handleClearSelected = () => {
     if (!selectedColorId) return;
-    const item = legendItems.find(i => i.id === selectedColorId);
-    if (!item) return;
     const filtered: Record<string, string> = {};
     for (const date in dayColors) {
-      if (dayColors[date] !== item.color) filtered[date] = dayColors[date];
+      if (dayColors[date] !== selectedColorId) filtered[date] = dayColors[date];
     }
     pushToHistory(filtered);
   };
@@ -343,8 +367,11 @@ function App() {
         if (typeof s.startYear === 'number') setStartYear(s.startYear);
         if (typeof s.institutionName === 'string') setInstitutionName(s.institutionName);
         if (typeof s.subtitle === 'string') setSubtitle(s.subtitle);
-        if (s.dayColors && typeof s.dayColors === 'object') pushToHistory(s.dayColors);
-        if (Array.isArray(s.legendItems)) setLegendItems(s.legendItems);
+        const importedItems: LegendItem[] = Array.isArray(s.legendItems) ? s.legendItems : legendItems;
+        if (Array.isArray(s.legendItems)) setLegendItems(importedItems);
+        if (s.dayColors && typeof s.dayColors === 'object') {
+          pushToHistory(migrateDayColors(s.dayColors, importedItems));
+        }
         if (Array.isArray(s.importantDates)) setImportantDates(s.importantDates);
         if (s.settings && typeof s.settings === 'object') {
           setSettings(prev => ({ ...DEFAULT_SETTINGS, ...s.settings }));
