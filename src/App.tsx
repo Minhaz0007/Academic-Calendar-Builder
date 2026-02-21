@@ -169,10 +169,14 @@ function App() {
         const rangeText = computeDateRangesText(dayColors, item.id);
         if (!rangeText) continue;
         const existing = prev.find(d => d.legendItemId === item.id);
-        // Only keep user-customised description; otherwise always sync with the item label
+        // Preserve user-customised description; otherwise sync with the item label
         const description = existing?.isDescriptionCustomized
           ? existing.description
           : item.label;
+        // Preserve user-customised date range; otherwise sync from calendar colors
+        const dateRange = existing?.isDateRangeCustomized
+          ? existing.dateRange
+          : rangeText;
         const firstDate = Object.keys(dayColors)
           .filter(d => dayColors[d] === item.id)
           .sort()[0] ?? '';
@@ -181,8 +185,9 @@ function App() {
             id: `auto-${item.id}`,
             legendItemId: item.id,
             description,
-            dateRange: rangeText,
+            dateRange,
             isDescriptionCustomized: existing?.isDescriptionCustomized,
+            isDateRangeCustomized: existing?.isDateRangeCustomized,
           },
           firstDate,
         });

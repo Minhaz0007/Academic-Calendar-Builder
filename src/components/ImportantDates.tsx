@@ -76,20 +76,17 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({ dates, setDates,
                 )}
               </div>
 
-              {/* Auto entries: plain text (always in sync with calendar) */}
-              {isAuto ? (
-                <p className="text-gray-800 whitespace-pre-line print:text-[9px] print:leading-tight leading-relaxed">
-                  {date.dateRange}
-                </p>
-              ) : (
-                <textarea
-                  value={date.dateRange}
-                  onChange={(e) => updateDate(date.id, { dateRange: e.target.value })}
-                  className="text-gray-800 bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none w-full resize-none overflow-hidden print:text-[9px] print:leading-tight"
-                  placeholder="List events here..."
-                  rows={Math.max(2, date.dateRange.split('\n').length)}
-                />
-              )}
+              {/* Date range — editable for both auto and manual entries */}
+              <textarea
+                value={date.dateRange}
+                onChange={(e) => updateDate(date.id, {
+                  dateRange: e.target.value,
+                  ...(isAuto ? { isDateRangeCustomized: true } : {}),
+                })}
+                className="text-gray-800 bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none w-full resize-none overflow-hidden print:text-[9px] print:leading-tight"
+                placeholder="List events here..."
+                rows={Math.max(2, date.dateRange.split('\n').length)}
+              />
             </div>
           );
         })}
