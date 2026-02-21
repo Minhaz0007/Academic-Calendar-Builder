@@ -1,0 +1,5 @@
+{
+  "name": "Academic Calendar Builder",
+  "description": "A tool to create printable academic year-at-a-glance calendars with custom events and color coding.",
+  "requestFramePermissions": []
+}
