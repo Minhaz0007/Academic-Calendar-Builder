@@ -17,20 +17,34 @@ const DEFAULT_SETTINGS: CalendarSettings = {
   highlightWeekends: false,
 };
 
-const STORAGE_KEY = 'academicCalendarState_v2';
+const STORAGE_KEY = 'academicCalendarState_v3';
+
+// ── Color palette ──────────────────────────────────────────────────────────
+const GREEN = '#22c55e';
+const RED   = '#ef4444';
+const AMBER = '#fbbf24';
 
 const DEFAULT_LEGEND: LegendItem[] = [
-  { id: '1', color: '#00ff00', label: 'FIRST DAY OF SCHOOL', description: 'September 3rd' },
-  { id: '2', color: '#ff0000', label: 'WINTER BREAK', description: 'Dec 20th - Dec 30th' },
-  { id: '3', color: '#ff6600', label: 'SUMMER BREAK', description: 'August 7th - September 1st' },
-  { id: '4', color: '#ff99cc', label: 'EID AL-ADHA BREAK', description: 'May 23rd - 31st' },
+  { id: '1', color: GREEN,  label: 'FIRST DAY OF SCHOOL',         description: 'September 3rd',             style: 'solid' },
+  { id: '2', color: GREEN,  label: 'LAST DAY OF SCHOOL',          description: 'August 6th',                style: 'solid' },
+  { id: '3', color: AMBER,  label: 'ACADEMIC EXAMS',              description: 'See important dates',       style: 'cross' },
+  { id: '4', color: RED,    label: 'WINTER BREAK',                description: 'Dec 20th \u2013 Dec 30th', style: 'cross' },
+  { id: '5', color: RED,    label: 'RAMADAN & EID AL-FITR BREAK', description: 'March 13th \u2013 29th',   style: 'cross' },
+  { id: '6', color: RED,    label: 'EID AL-ADHA BREAK',           description: 'May 23rd \u2013 31st',     style: 'cross' },
+  { id: '7', color: RED,    label: 'INDEPENDENCE DAY',            description: 'July 4th',                  style: 'cross' },
+  { id: '8', color: RED,    label: 'SUMMER BREAK',                description: 'Aug 7th \u2013 Sep 1st',   style: 'cross' },
 ];
 
 const DEFAULT_DATES: ImportantDate[] = [
-  { id: '1', dateRange: 'Nov 20 - Nov 28: Academic First Term Exams', description: 'November 2025' },
-  { id: '2', dateRange: 'Dec 20 - Dec 30: Winter Break', description: 'December 2025' },
-  { id: '3', dateRange: 'Feb 02 - Feb 14: Islamic Studies Mid Term Exams', description: 'February 2026' },
-  { id: '4', dateRange: 'Mar 04 - Mar 06: Hifz Exams\nMar 07 - Mar 24: Ramadan & Eid al-Fitr Break', description: 'March 2026' },
+  { id: '1', description: 'November 2025',  dateRange: 'Nov 20 \u2013 Nov 28: Academic First Term Exams' },
+  { id: '2', description: 'December 2025',  dateRange: 'Dec 20 \u2013 Dec 30: Winter Break' },
+  { id: '3', description: 'February 2026',  dateRange: 'Feb 02 \u2013 Feb 14: Islamic Studies Mid Term Exams' },
+  { id: '4', description: 'March 2026',     dateRange: 'Mar 04 \u2013 Mar 06: Hifz Exams\nMar 13 \u2013 Mar 29: Ramadan & Eid al-Fitr Break' },
+  { id: '5', description: 'April 2026',     dateRange: 'Apr 06 \u2013 Apr 10: Academic Second Term Exam' },
+  { id: '6', description: 'May 2026',       dateRange: 'May 23 \u2013 May 31: Eid al-Adha Break' },
+  { id: '7', description: 'July 2026',      dateRange: 'Jul 04: Independence Day\nJul 13 \u2013 Jul 22: Academic Final Term Exams\nJul 24 \u2013 Aug 06: Islamic Studies Final Term Exams' },
+  { id: '8', description: 'August 2026',    dateRange: 'Aug 03 \u2013 Aug 06: Hifz Final Exams\nAug 07 \u2013 Sep 01: Summer Break' },
+  { id: '9', description: 'September 2026', dateRange: 'Sep 02: Next school year begins' },
 ];
 
 /** Returns the last day of a given month/year as a Date (UTC). */
@@ -38,13 +52,58 @@ function lastDayOfMonth(year: number, month: number): Date {
   return new Date(Date.UTC(year, month + 1, 0));
 }
 
+/** Fill a date range with a color into an accumulator object. */
+function fillDates(from: string, to: string, color: string, acc: Record<string, string>): void {
+  const start = new Date(from + 'T00:00:00Z');
+  const end   = new Date(to   + 'T00:00:00Z');
+  const cur   = new Date(start);
+  while (cur <= end) {
+    acc[cur.toISOString().split('T')[0]] = color;
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+}
+
+/** Pre-populated day colors matching the 2025/2026 academic year. */
+const DEFAULT_DAY_COLORS = (() => {
+  const c: Record<string, string> = {};
+  // Previous summer break (Aug 7–Sep 1, 2025) – Sep 1 visible in the calendar
+  c['2025-09-01'] = RED;
+  // First Day of School
+  c['2025-09-03'] = GREEN;
+  // Academic First Term Exams
+  fillDates('2025-11-20', '2025-11-28', AMBER, c);
+  // Winter Break
+  fillDates('2025-12-20', '2025-12-30', RED, c);
+  // Islamic Studies Mid Term Exams
+  fillDates('2026-02-02', '2026-02-14', AMBER, c);
+  // Hifz Exams
+  fillDates('2026-03-04', '2026-03-06', AMBER, c);
+  // Ramadan & Eid al-Fitr Break (Mar 13–29)
+  fillDates('2026-03-13', '2026-03-29', RED, c);
+  // Academic Second Term Exam
+  fillDates('2026-04-06', '2026-04-10', AMBER, c);
+  // Eid al-Adha Break
+  fillDates('2026-05-23', '2026-05-31', RED, c);
+  // Independence Day
+  c['2026-07-04'] = RED;
+  // Academic Final Term Exams
+  fillDates('2026-07-13', '2026-07-22', AMBER, c);
+  // Islamic Studies Final Term Exams + Hifz Final (Jul 24–Aug 5; Aug 6 = Last Day)
+  fillDates('2026-07-24', '2026-08-05', AMBER, c);
+  // Last Day of School – overrides exam amber
+  c['2026-08-06'] = GREEN;
+  // Summer Break 2026
+  fillDates('2026-08-07', '2026-09-01', RED, c);
+  return c;
+})();
+
 function App() {
   // Core state
   const [startYear, setStartYear] = useState(2025);
   const [institutionName, setInstitutionName] = useState('MADINATUL ULOOM');
   const [subtitle, setSubtitle] = useState('995 Fillmore Avenue, Buffalo, NY 14211 Tel: (716) 292-5956 www.madinatululoom.org');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [dayColors, setDayColors] = useState<Record<string, string>>({});
+  const [dayColors, setDayColors] = useState<Record<string, string>>(DEFAULT_DAY_COLORS);
   const [legendItems, setLegendItems] = useState<LegendItem[]>(DEFAULT_LEGEND);
   const [importantDates, setImportantDates] = useState<ImportantDate[]>(DEFAULT_DATES);
   const [settings, setSettings] = useState<CalendarSettings>(DEFAULT_SETTINGS);
@@ -68,8 +127,8 @@ function App() {
   const [mrEndYear, setMrEndYear] = useState(startYear);
   const [mrEndMonth, setMrEndMonth] = useState(settings.startMonth);
 
-  // Undo / Redo stack
-  const [colorHistory, setColorHistory] = useState<Record<string, string>[]>([{}]);
+  // Undo / Redo stack (starts with the pre-populated defaults)
+  const [colorHistory, setColorHistory] = useState<Record<string, string>[]>([DEFAULT_DAY_COLORS]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
   const importRef = useRef<HTMLInputElement>(null);
@@ -85,8 +144,9 @@ function App() {
         if (typeof s.subtitle === 'string') setSubtitle(s.subtitle);
         if (typeof s.logoUrl === 'string') setLogoUrl(s.logoUrl);
         if (s.dayColors && typeof s.dayColors === 'object') {
-          setDayColors(s.dayColors);
-          setColorHistory([s.dayColors]);
+          const dc = s.dayColors as Record<string, string>;
+          setDayColors(dc);
+          setColorHistory([dc]);
         }
         if (Array.isArray(s.legendItems)) setLegendItems(s.legendItems);
         if (Array.isArray(s.importantDates)) setImportantDates(s.importantDates);
