@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDay, LegendItem, ImportantDate } from '../types';
+import { CalendarDay, LegendItem, ImportantDate, PrintLegendItem } from '../types';
 import { CalendarTheme } from '../themes';
 
 // ── Month helpers (mirrors ImportantDates.tsx) ─────────────────────────────────
@@ -21,11 +21,12 @@ function getMonthLabel(date: ImportantDate, startMonth: number, startYear: numbe
       return `${FULL_MONTHS[d.getUTCMonth()]}, ${d.getUTCFullYear()}`;
     }
   }
+  // Months strictly after startMonth belong to startYear; at or before wrap to startYear + 1.
   const firstLine = (date.dateRange || '').split('\n')[0].trim();
   for (const abbr of MONTH_ABBR_KEYS) {
     if (firstLine.startsWith(abbr)) {
       const monthIdx = MONTH_ABBR_KEYS.indexOf(abbr);
-      const year = monthIdx >= startMonth ? startYear : startYear + 1;
+      const year = monthIdx > startMonth ? startYear : startYear + 1;
       return `${MONTH_ABBR_MAP[abbr]}, ${year}`;
     }
   }
@@ -41,6 +42,7 @@ interface PrintViewProps {
   dayColors: Record<string, string>;
   legendItems: LegendItem[];
   importantDates: ImportantDate[];
+  printLegendItems: PrintLegendItem[];
   months: { year: number; month: number }[];
   accentColor?: string;
   highlightWeekends?: boolean;
@@ -59,6 +61,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
   dayColors,
   legendItems,
   importantDates,
+  printLegendItems,
   months,
   accentColor = '#a5f3fc',
   highlightWeekends = false,
@@ -196,47 +199,27 @@ export const PrintView: React.FC<PrintViewProps> = ({
             })()}
           </div>
 
-          {/* Legend at bottom of Important Dates */}
-          {(() => {
-            const usedLegendItems = legendItems.filter(item =>
-              importantDates.some(d => d.legendItemId === item.id)
-            );
-            const manualColored = importantDates.filter(d => !d.legendItemId && d.color);
-            if (usedLegendItems.length === 0 && manualColored.length === 0) return null;
-            return (
-              <div className="flex-shrink-0 border-t-2 border-black mt-1.5 pt-1">
-                <div className="text-[7px] font-bold uppercase tracking-widest mb-0.5">Legend</div>
-                <div className="flex flex-col gap-0.5">
-                  {usedLegendItems.map(item => (
-                    <div key={item.id} className="flex items-center gap-1">
-                      <span
-                        className="inline-block flex-shrink-0"
-                        style={{
-                          width: '8px', height: '8px', minWidth: '8px',
-                          backgroundColor: item.color,
-                          border: '0.5px solid rgba(0,0,0,0.25)',
-                        }}
-                      />
-                      <span className="text-[7px] uppercase font-medium leading-tight">{item.label}</span>
-                    </div>
-                  ))}
-                  {manualColored.map(d => (
-                    <div key={d.id} className="flex items-center gap-1">
-                      <span
-                        className="inline-block flex-shrink-0"
-                        style={{
-                          width: '8px', height: '8px', minWidth: '8px',
-                          backgroundColor: d.color,
-                          border: '0.5px solid rgba(0,0,0,0.25)',
-                        }}
-                      />
-                      <span className="text-[7px] uppercase font-medium leading-tight">{d.description}</span>
-                    </div>
-                  ))}
-                </div>
+          {/* Manual legend at bottom of Important Dates */}
+          {printLegendItems.length > 0 && (
+            <div className="flex-shrink-0 border-t-2 border-black mt-1.5 pt-1">
+              <div className="text-[7px] font-bold uppercase tracking-widest mb-0.5">Legend</div>
+              <div className="flex flex-col gap-0.5">
+                {printLegendItems.map(item => (
+                  <div key={item.id} className="flex items-center gap-1">
+                    <span
+                      className="inline-block flex-shrink-0"
+                      style={{
+                        width: '8px', height: '8px', minWidth: '8px',
+                        backgroundColor: item.color,
+                        border: '0.5px solid rgba(0,0,0,0.25)',
+                      }}
+                    />
+                    <span className="text-[7px] uppercase font-medium leading-tight">{item.label}</span>
+                  </div>
+                ))}
               </div>
-            );
-          })()}
+            </div>
+          )}
         </div>
       </div>
     </div>

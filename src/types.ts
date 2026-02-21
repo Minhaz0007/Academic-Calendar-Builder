@@ -32,6 +32,12 @@ export interface CalendarSettings {
   dateBold: boolean; // render day numbers bold
 }
 
+export interface PrintLegendItem {
+  id: string;
+  color: string;
+  label: string;
+}
+
 export interface CalendarState {
   startYear: number;
   startMonth: number; // 0-11

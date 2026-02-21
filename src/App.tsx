@@ -4,7 +4,7 @@ import { Legend } from './components/Legend';
 import { ImportantDates } from './components/ImportantDates';
 import { MonthGrid } from './components/MonthGrid';
 import { PrintView } from './components/PrintView';
-import { LegendItem, ImportantDate, CalendarSettings } from './types';
+import { LegendItem, ImportantDate, CalendarSettings, PrintLegendItem } from './types';
 import { supabase, getSessionKey } from './lib/supabase';
 import { THEMES, getTheme } from './themes';
 import { Printer, Undo2, Redo2, Eraser, Download, Upload, Settings, ChevronDown, CloudUpload, Check, AlertCircle } from 'lucide-react';
@@ -112,6 +112,7 @@ function App() {
   const [dayColors, setDayColors] = useState<Record<string, string>>({});
   const [legendItems, setLegendItems] = useState<LegendItem[]>(DEFAULT_LEGEND);
   const [importantDates, setImportantDates] = useState<ImportantDate[]>(DEFAULT_DATES);
+  const [printLegendItems, setPrintLegendItems] = useState<PrintLegendItem[]>([]);
   const [settings, setSettings] = useState<CalendarSettings>(DEFAULT_SETTINGS);
 
   // UI / interaction state
@@ -183,7 +184,10 @@ function App() {
         }
         if (Array.isArray(data.important_dates)) setImportantDates(data.important_dates);
         if (data.settings && typeof data.settings === 'object') {
-          setSettings(prev => ({ ...DEFAULT_SETTINGS, ...data.settings }));
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { printLegendItems: savedPrintLegend, ...calSettings } = data.settings as any;
+          setSettings(prev => ({ ...DEFAULT_SETTINGS, ...calSettings }));
+          if (Array.isArray(savedPrintLegend)) setPrintLegendItems(savedPrintLegend);
         }
       }
     };
@@ -199,14 +203,14 @@ function App() {
         subtitle,
         logo_url:         logoUrl,
         start_year:       startYear,
-        settings,
+        settings:         { ...settings, printLegendItems },
         day_colors:       dayColors,
         legend_items:     legendItems,
         important_dates:  importantDates,
       }, { onConflict: 'session_key' });
     }, 1000);
     return () => clearTimeout(timer);
-  }, [startYear, institutionName, subtitle, logoUrl, dayColors, legendItems, importantDates, settings]);
+  }, [startYear, institutionName, subtitle, logoUrl, dayColors, legendItems, importantDates, settings, printLegendItems]);
 
   // ── Undo / Redo ────────────────────────────────────────────────────────────
   const pushToHistory = (newColors: Record<string, string>) => {
@@ -370,7 +374,7 @@ function App() {
         subtitle,
         logo_url:         logoUrl,
         start_year:       startYear,
-        settings,
+        settings:         { ...settings, printLegendItems },
         day_colors:       dayColors,
         legend_items:     legendItems,
         important_dates:  importantDates,
@@ -800,7 +804,8 @@ function App() {
               <ImportantDates
                 dates={importantDates}
                 setDates={setImportantDates}
-                legendItems={legendItems}
+                printLegendItems={printLegendItems}
+                setPrintLegendItems={setPrintLegendItems}
                 startYear={startYear}
                 startMonth={settings.startMonth}
               />
@@ -819,6 +824,7 @@ function App() {
         dayColors={dayColors}
         legendItems={legendItems}
         importantDates={importantDates}
+        printLegendItems={printLegendItems}
         months={months}
         accentColor={effectiveAccent}
         highlightWeekends={settings.highlightWeekends}
