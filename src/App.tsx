@@ -861,7 +861,7 @@ function App() {
 
       <style>{`
         @media print {
-          @page { size: landscape; margin: 5mm; }
+          @page { size: A4 landscape; margin: 4mm; }
           body {
             background: white;
             -webkit-print-color-adjust: exact;

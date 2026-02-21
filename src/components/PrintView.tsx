@@ -39,11 +39,11 @@ export const PrintView: React.FC<PrintViewProps> = ({
 
       {/* ── Banner Header ── */}
       <header
-        className="flex items-center gap-4 px-5 py-3 flex-shrink-0"
+        className="flex items-center gap-3 px-4 py-1.5 flex-shrink-0"
         style={{ backgroundColor: accentColor }}
       >
-        {/* Logo — same fallback as CalendarHeader */}
-        <div className="w-12 h-12 rounded-full border-2 border-white/50 overflow-hidden bg-white/10 flex-shrink-0">
+        {/* Logo */}
+        <div className="w-9 h-9 rounded-full border-2 border-white/50 overflow-hidden bg-white/10 flex-shrink-0">
           <img
             src={logoUrl || '/logo.png'}
             alt="School Logo"
@@ -55,13 +55,13 @@ export const PrintView: React.FC<PrintViewProps> = ({
         {/* Name + address */}
         <div className="flex-1 text-center leading-tight min-w-0">
           <div
-            className="font-bold uppercase tracking-widest text-2xl leading-none"
+            className="font-bold uppercase tracking-widest text-lg leading-none"
             style={{ color: headerTextColor }}
           >
             {institutionName}
           </div>
           <div
-            className="text-[9px] italic mt-0.5 opacity-85 tracking-wide"
+            className="text-[8px] italic mt-0.5 opacity-85 tracking-wide"
             style={{ color: headerTextColor }}
           >
             {subtitle.split('|').map((part, i) => (
@@ -77,22 +77,20 @@ export const PrintView: React.FC<PrintViewProps> = ({
 
         {/* Year */}
         <div className="text-right flex-shrink-0" style={{ color: headerTextColor }}>
-          <div className="font-bold text-xl uppercase tracking-wide leading-tight">Academic Calendar</div>
-          <div className="font-bold text-xl leading-none mt-0.5">
+          <div className="font-bold text-base uppercase tracking-wide leading-tight">Academic Calendar</div>
+          <div className="font-bold text-base leading-none mt-0.5">
             {startYear} – {startYear + 1}
           </div>
         </div>
       </header>
 
       {/* ── Body ── */}
-      <div className="flex flex-1 gap-2 px-2 pb-2 min-h-0 overflow-hidden mt-1.5">
+      <div className="flex flex-1 gap-1.5 px-2 pb-1.5 min-h-0 overflow-hidden mt-1">
 
-        {/* Left: Calendar grid + Legend */}
-        <div className="flex flex-col flex-[4] gap-1.5 min-h-0">
-
-          {/* Month grid */}
+        {/* Left: Calendar grid only (legend removed) */}
+        <div className="flex flex-col flex-[4] min-h-0">
           <div
-            className="flex-1 grid gap-x-1.5 gap-y-1 min-h-0"
+            className="flex-1 grid gap-x-1 gap-y-0.5 min-h-0"
             style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
           >
             {months.map(m => (
@@ -110,57 +108,56 @@ export const PrintView: React.FC<PrintViewProps> = ({
               />
             ))}
           </div>
-
-          {/* Legend */}
-          <div className="border border-black text-[8px] flex-shrink-0">
-            <div
-              className="grid"
-              style={{ gridTemplateColumns: `repeat(${Math.min(legendItems.length, 4)}, 1fr)` }}
-            >
-              {legendItems.map((item, i) => {
-                const cols4 = Math.min(legendItems.length, 4);
-                const totalRows = Math.ceil(legendItems.length / cols4);
-                const row = Math.floor(i / cols4);
-                const col = i % cols4;
-                const isLastRow = row === totalRows - 1;
-                const isLastCol = col === cols4 - 1 || i === legendItems.length - 1;
-                return (
-                  <div
-                    key={item.id}
-                    className="flex"
-                    style={{
-                      borderRight: isLastCol ? 'none' : '1px solid black',
-                      borderBottom: isLastRow ? 'none' : '1px solid black',
-                    }}
-                  >
-                    <div
-                      className="flex items-center justify-center text-center font-bold uppercase leading-tight p-0.5"
-                      style={{ backgroundColor: item.color, width: '38%', borderRight: '1px solid black', wordBreak: 'break-word' }}
-                    >
-                      {item.label}
-                    </div>
-                    <div className="flex items-center justify-center text-center leading-tight p-0.5 bg-white" style={{ width: '62%' }}>
-                      {item.description || ''}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
         </div>
 
         {/* Right: Important Dates */}
-        <div className="flex flex-col border-l-2 border-black pl-2 min-h-0 overflow-hidden" style={{ width: '18%', flexShrink: 0 }}>
-          <h3 className="text-[9px] font-bold uppercase border-b-2 border-black mb-1 pb-0.5 flex-shrink-0">
+        <div
+          className="flex flex-col border-l-2 border-black pl-2 min-h-0 overflow-hidden"
+          style={{ width: '18%', flexShrink: 0 }}
+        >
+          <h3 className="text-[8.5px] font-bold uppercase border-b-2 border-black mb-1 pb-0.5 flex-shrink-0 tracking-wider">
             Important Dates
           </h3>
-          <div className="space-y-1.5 text-[8px] overflow-hidden flex-1">
-            {importantDates.map(date => (
-              <div key={date.id}>
-                <div className="font-bold uppercase text-[7.5px] leading-tight">{date.description}</div>
-                <div className="whitespace-pre-wrap leading-tight text-gray-800 text-[7.5px]">{date.dateRange}</div>
-              </div>
-            ))}
+          <div className="space-y-1 text-[7.5px] overflow-hidden flex-1">
+            {importantDates.map(date => {
+              const legendItem = date.legendItemId
+                ? legendItems.find(i => i.id === date.legendItemId)
+                : undefined;
+              return (
+                <div key={date.id}>
+                  {/* Description row with color dot */}
+                  <div className="flex items-center gap-1 leading-tight">
+                    {legendItem ? (
+                      <span
+                        className="inline-block flex-shrink-0 rounded-full"
+                        style={{
+                          width: '7px',
+                          height: '7px',
+                          backgroundColor: legendItem.color,
+                          border: '0.5px solid rgba(0,0,0,0.25)',
+                        }}
+                      />
+                    ) : (
+                      /* neutral bullet for manual entries */
+                      <span
+                        className="inline-block flex-shrink-0 rounded-full bg-gray-400"
+                        style={{ width: '5px', height: '5px' }}
+                      />
+                    )}
+                    <span className="font-bold uppercase text-[7.5px] leading-tight">
+                      {date.description}
+                    </span>
+                  </div>
+                  {/* Date range indented under the dot */}
+                  <div
+                    className="whitespace-pre-wrap leading-tight text-gray-700 text-[7px] mt-px"
+                    style={{ paddingLeft: '12px' }}
+                  >
+                    {date.dateRange}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -210,7 +207,7 @@ const PrintMonth: React.FC<{
     <div className="flex flex-col h-full">
       {/* Month title */}
       <div
-        className="font-bold text-center uppercase leading-tight py-0.5 border border-black border-b-0"
+        className="font-bold text-center uppercase leading-tight py-px border border-black border-b-0"
         style={{ backgroundColor: accentColor, color: headerTextColor, fontSize: `${dateFontSize + 1}px` }}
       >
         {monthName} '{shortYear}
@@ -236,7 +233,7 @@ const PrintMonth: React.FC<{
         {days.map((day, idx) => {
           const legendItemId = day.isCurrentMonth ? dayColors[day.date] : undefined;
           const legendItem = legendItemId ? legendItems.find(i => i.id === legendItemId) : undefined;
-          const colorId = legendItem?.color; // hex color for background
+          const colorId = legendItem?.color;
           const showCross = legendItem?.style === 'cross';
           const colIdx = idx % 7;
           const isWeekend = highlightWeekends && (colIdx === 0 || colIdx === 6) && day.isCurrentMonth && !colorId;
