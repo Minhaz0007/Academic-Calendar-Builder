@@ -16,6 +16,7 @@ export interface ImportantDate {
   dateRange: string;
   description: string;
   legendItemId?: string; // set on auto-generated entries; undefined for manual entries
+  isDescriptionCustomized?: boolean; // true when user has manually edited the auto-entry description
 }
 
 export interface CalendarSettings {
