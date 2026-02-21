@@ -71,6 +71,17 @@ function lastDayOfMonth(year: number, month: number): Date {
 }
 
 /**
+ * Inserts ' | ' separators into legacy subtitle strings that used plain spaces
+ * between the address, telephone, and website segments.
+ */
+function migrateSubtitle(raw: string): string {
+  if (raw.includes('|')) return raw; // already has separators
+  return raw
+    .replace(/\s+(Tel:)/i, '  |  $1')
+    .replace(/\s+(www\.|https?:\/\/)/gi, '  |  $1');
+}
+
+/**
  * Migrates legacy dayColors (date → hexColor) to the current format
  * (date → legendItemId). Values that already look like IDs are left untouched.
  */
@@ -194,7 +205,7 @@ function App() {
       if (data) {
         if (typeof data.start_year === 'number') setStartYear(data.start_year);
         if (typeof data.institution_name === 'string') setInstitutionName(data.institution_name);
-        if (typeof data.subtitle === 'string') setSubtitle(data.subtitle);
+        if (typeof data.subtitle === 'string') setSubtitle(migrateSubtitle(data.subtitle));
         if (typeof data.logo_url === 'string') setLogoUrl(data.logo_url);
         const loadedItems: LegendItem[] = Array.isArray(data.legend_items)
           ? data.legend_items

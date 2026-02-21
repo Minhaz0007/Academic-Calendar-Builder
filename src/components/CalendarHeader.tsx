@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 // Embedded default logo — replace src with the actual logo path once saved to public/logo.png
 const DEFAULT_LOGO_SRC = '/logo.png';
@@ -27,6 +27,8 @@ export const CalendarHeader: React.FC<HeaderProps> = ({
   accentColor = '#a5f3fc',
   headerTextColor = '#000000',
 }) => {
+  const [editingSubtitle, setEditingSubtitle] = useState(false);
+
   // Use Supabase-stored logo if user uploaded one, otherwise fall back to the embedded default
   const effectiveLogo = logoUrl || DEFAULT_LOGO_SRC;
 
@@ -57,14 +59,33 @@ export const CalendarHeader: React.FC<HeaderProps> = ({
             className="w-full bg-transparent border-none outline-none text-center font-bold uppercase tracking-widest text-3xl print:text-2xl leading-tight placeholder-white/50 print:border-none"
             style={{ color: headerTextColor }}
           />
-          <input
-            type="text"
-            value={subtitle}
-            onChange={(e) => setSubtitle(e.target.value)}
-            placeholder="Address · Phone · Website"
-            className="w-full bg-transparent border-none outline-none text-center text-[11px] print:text-[9px] italic mt-0.5 placeholder-white/50 tracking-wide"
-            style={{ color: headerTextColor, opacity: 0.85 }}
-          />
+          {editingSubtitle ? (
+            <input
+              autoFocus
+              type="text"
+              value={subtitle}
+              onChange={(e) => setSubtitle(e.target.value)}
+              onBlur={() => setEditingSubtitle(false)}
+              placeholder="Address · Phone · Website"
+              className="w-full bg-transparent border-none outline-none text-center text-[11px] italic mt-0.5 placeholder-white/50 tracking-wide"
+              style={{ color: headerTextColor, opacity: 0.85 }}
+            />
+          ) : (
+            <div
+              onClick={() => setEditingSubtitle(true)}
+              className="text-center text-[11px] italic mt-0.5 tracking-wide cursor-text select-none print:text-[9px]"
+              style={{ color: headerTextColor, opacity: 0.85 }}
+            >
+              {subtitle.split('|').map((part, i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && (
+                    <span className="mx-2.5 not-italic opacity-60 font-light">|</span>
+                  )}
+                  {part.trim()}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Year — right */}
