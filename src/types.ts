@@ -17,9 +17,16 @@ export interface ImportantDate {
   description: string;
 }
 
+export interface CalendarSettings {
+  startMonth: number; // 0-11
+  numMonths: number; // number of months to display (6, 9, 12)
+  accentColor: string; // hex color for month header background
+  highlightWeekends: boolean; // shade weekend columns
+}
+
 export interface CalendarState {
   startYear: number;
-  startMonth: number; // 0-11 (usually 7 or 8 for academic year)
+  startMonth: number; // 0-11
   institutionName: string;
   logoUrl: string | null;
   dayColors: Record<string, string>; // date -> color hex

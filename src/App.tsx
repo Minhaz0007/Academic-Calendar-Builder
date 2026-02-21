@@ -1,171 +1,492 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CalendarHeader } from './components/CalendarHeader';
 import { Legend } from './components/Legend';
 import { ImportantDates } from './components/ImportantDates';
 import { MonthGrid } from './components/MonthGrid';
 import { PrintView } from './components/PrintView';
-import { LegendItem, ImportantDate } from './types';
-import { Printer, Download } from 'lucide-react';
+import { LegendItem, ImportantDate, CalendarSettings } from './types';
+import { Printer, Undo2, Redo2, Eraser, Download, Upload, Settings, ChevronDown } from 'lucide-react';
+
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+const DEFAULT_SETTINGS: CalendarSettings = {
+  startMonth: 8, // September
+  numMonths: 12,
+  accentColor: '#a5f3fc',
+  highlightWeekends: false,
+};
+
+const STORAGE_KEY = 'academicCalendarState_v2';
+
+const DEFAULT_LEGEND: LegendItem[] = [
+  { id: '1', color: '#00ff00', label: 'FIRST DAY OF SCHOOL', description: 'September 3rd' },
+  { id: '2', color: '#ff0000', label: 'WINTER BREAK', description: 'Dec 20th - Dec 30th' },
+  { id: '3', color: '#ff6600', label: 'SUMMER BREAK', description: 'August 7th - September 1st' },
+  { id: '4', color: '#ff99cc', label: 'EID AL-ADHA BREAK', description: 'May 23rd - 31st' },
+];
+
+const DEFAULT_DATES: ImportantDate[] = [
+  { id: '1', dateRange: 'Nov 20 - Nov 28: Academic First Term Exams', description: 'November 2025' },
+  { id: '2', dateRange: 'Dec 20 - Dec 30: Winter Break', description: 'December 2025' },
+  { id: '3', dateRange: 'Feb 02 - Feb 14: Islamic Studies Mid Term Exams', description: 'February 2026' },
+  { id: '4', dateRange: 'Mar 04 - Mar 06: Hifz Exams\nMar 07 - Mar 24: Ramadan & Eid al-Fitr Break', description: 'March 2026' },
+];
+
+/** Returns the last day of a given month/year as a Date (UTC). */
+function lastDayOfMonth(year: number, month: number): Date {
+  return new Date(Date.UTC(year, month + 1, 0));
+}
 
 function App() {
-  // State
+  // Core state
   const [startYear, setStartYear] = useState(2025);
   const [institutionName, setInstitutionName] = useState('MADINATUL ULOOM');
   const [subtitle, setSubtitle] = useState('995 Fillmore Avenue, Buffalo, NY 14211 Tel: (716) 292-5956 www.madinatululoom.org');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [dayColors, setDayColors] = useState<Record<string, string>>({});
-  const [legendItems, setLegendItems] = useState<LegendItem[]>([
-    { id: '1', color: '#00ff00', label: 'FIRST DAY OF SCHOOL', description: 'September 3rd' },
-    { id: '2', color: '#ff0000', label: 'WINTER BREAK', description: 'Dec 20th - Dec 30th' },
-    { id: '3', color: '#ff0000', label: 'SUMMER BREAK', description: 'August 7th - September 1st' },
-    { id: '4', color: '#ff0000', label: 'EID AL-ADHA BREAK', description: 'May 23rd - 31st' },
-  ]);
-  const [importantDates, setImportantDates] = useState<ImportantDate[]>([
-    { id: '1', dateRange: 'Nov 20 Nov 28: Academic First Term Exams', description: 'November 2025' },
-    { id: '2', dateRange: 'Dec 20 - Dec 30: Winter Break', description: 'December 2025' },
-    { id: '3', dateRange: 'Feb 02 - Feb 14: Islamic Studies Mid Term Exams', description: 'February 2026' },
-    { id: '4', dateRange: 'Mar 04 - Mar 06: Hifz Exams\nMar 07- Mar 24: Ramadan & Eid al-Fitr Break', description: 'March 2026' },
-  ]);
-  
-  // UI State
-  const [selectedColorId, setSelectedColorId] = useState<string | null>(legendItems[0]?.id || null);
-  const [lastClickedDate, setLastClickedDate] = useState<string | null>(null);
+  const [legendItems, setLegendItems] = useState<LegendItem[]>(DEFAULT_LEGEND);
+  const [importantDates, setImportantDates] = useState<ImportantDate[]>(DEFAULT_DATES);
+  const [settings, setSettings] = useState<CalendarSettings>(DEFAULT_SETTINGS);
 
+  // UI / interaction state
+  const [selectedColorId, setSelectedColorId] = useState<string | null>(DEFAULT_LEGEND[0].id);
+  const [lastClickedDate, setLastClickedDate] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Date range mode: 'date' = individual date pickers, 'month' = whole-month selectors
+  const [rangeMode, setRangeMode] = useState<'date' | 'month'>('date');
+
+  // Date range state
   const [rangeStart, setRangeStart] = useState('');
   const [rangeEnd, setRangeEnd] = useState('');
 
-  // Handlers
-  const handleRangeApply = () => {
-    if (!rangeStart || !rangeEnd || !selectedColorId) return;
-    
-    const selectedItem = legendItems.find(i => i.id === selectedColorId);
-    if (!selectedItem) return;
+  // Month range state (year + month selects)
+  const currentYear = new Date().getFullYear();
+  const [mrStartYear, setMrStartYear] = useState(startYear);
+  const [mrStartMonth, setMrStartMonth] = useState(settings.startMonth);
+  const [mrEndYear, setMrEndYear] = useState(startYear);
+  const [mrEndMonth, setMrEndMonth] = useState(settings.startMonth);
 
-    // Fix: Use UTC to avoid timezone shifts
-    const start = new Date(rangeStart + 'T00:00:00Z');
-    const end = new Date(rangeEnd + 'T00:00:00Z');
-    
-    if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-      const startDate = start < end ? start : end;
-      const endDate = start < end ? end : start;
-      
-      const newColors = { ...dayColors };
-      const current = new Date(startDate);
-      
-      let safety = 0;
-      while (current <= endDate && safety < 1000) {
-        const dateStr = current.toISOString().split('T')[0];
-        newColors[dateStr] = selectedItem.color;
-        current.setUTCDate(current.getUTCDate() + 1);
-        safety++;
+  // Undo / Redo stack
+  const [colorHistory, setColorHistory] = useState<Record<string, string>[]>([{}]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+
+  const importRef = useRef<HTMLInputElement>(null);
+
+  // ── Persist & restore ──────────────────────────────────────────────────────
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const s = JSON.parse(saved);
+        if (typeof s.startYear === 'number') setStartYear(s.startYear);
+        if (typeof s.institutionName === 'string') setInstitutionName(s.institutionName);
+        if (typeof s.subtitle === 'string') setSubtitle(s.subtitle);
+        if (typeof s.logoUrl === 'string') setLogoUrl(s.logoUrl);
+        if (s.dayColors && typeof s.dayColors === 'object') {
+          setDayColors(s.dayColors);
+          setColorHistory([s.dayColors]);
+        }
+        if (Array.isArray(s.legendItems)) setLegendItems(s.legendItems);
+        if (Array.isArray(s.importantDates)) setImportantDates(s.importantDates);
+        if (s.settings && typeof s.settings === 'object') {
+          setSettings(prev => ({ ...DEFAULT_SETTINGS, ...s.settings }));
+        }
       }
-      setDayColors(newColors);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        startYear, institutionName, subtitle, logoUrl,
+        dayColors, legendItems, importantDates, settings,
+      }));
+    } catch { /* ignore quota errors */ }
+  }, [startYear, institutionName, subtitle, logoUrl, dayColors, legendItems, importantDates, settings]);
+
+  // ── Undo / Redo ────────────────────────────────────────────────────────────
+  const pushToHistory = (newColors: Record<string, string>) => {
+    const trimmed = colorHistory.slice(0, historyIndex + 1);
+    const next = [...trimmed, newColors].slice(-50);
+    setColorHistory(next);
+    setHistoryIndex(next.length - 1);
+    setDayColors(newColors);
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const idx = historyIndex - 1;
+      setHistoryIndex(idx);
+      setDayColors(colorHistory[idx]);
     }
   };
 
+  const handleRedo = () => {
+    if (historyIndex < colorHistory.length - 1) {
+      const idx = historyIndex + 1;
+      setHistoryIndex(idx);
+      setDayColors(colorHistory[idx]);
+    }
+  };
+
+  // ── Shared color range fill ────────────────────────────────────────────────
+  const fillRange = (
+    base: Record<string, string>,
+    fromISO: string,
+    toISO: string,
+    color: string,
+  ): Record<string, string> => {
+    const a = new Date(fromISO + 'T00:00:00Z');
+    const b = new Date(toISO + 'T00:00:00Z');
+    if (isNaN(a.getTime()) || isNaN(b.getTime())) return base;
+    const s = a <= b ? a : b;
+    const e = a <= b ? b : a;
+    const result = { ...base };
+    const cur = new Date(s);
+    let guard = 0;
+    while (cur <= e && guard < 1000) {
+      result[cur.toISOString().split('T')[0]] = color;
+      cur.setUTCDate(cur.getUTCDate() + 1);
+      guard++;
+    }
+    return result;
+  };
+
+  // ── Range handlers ─────────────────────────────────────────────────────────
+  const handleDateRangeApply = () => {
+    if (!rangeStart || !rangeEnd || !selectedColorId) return;
+    const item = legendItems.find(i => i.id === selectedColorId);
+    if (!item) return;
+    pushToHistory(fillRange(dayColors, rangeStart, rangeEnd, item.color));
+  };
+
+  const handleMonthRangeApply = () => {
+    if (!selectedColorId) return;
+    const item = legendItems.find(i => i.id === selectedColorId);
+    if (!item) return;
+
+    // Build full date strings: 1st of start month → last day of end month
+    const fromISO = `${mrStartYear}-${String(mrStartMonth + 1).padStart(2, '0')}-01`;
+    const lastDay = lastDayOfMonth(mrEndYear, mrEndMonth);
+    const toISO = lastDay.toISOString().split('T')[0];
+
+    pushToHistory(fillRange(dayColors, fromISO, toISO, item.color));
+  };
+
+  // ── Day click ──────────────────────────────────────────────────────────────
   const handleDayClick = (date: string, isShiftKey: boolean) => {
     if (!selectedColorId) return;
-    
-    const selectedItem = legendItems.find(i => i.id === selectedColorId);
-    if (!selectedItem) return;
+    const item = legendItems.find(i => i.id === selectedColorId);
+    if (!item) return;
 
     if (isShiftKey && lastClickedDate) {
-      // Range selection
-      // Fix: Use UTC to avoid timezone shifts
-      const start = new Date(lastClickedDate + 'T00:00:00Z');
-      const end = new Date(date + 'T00:00:00Z');
-      
-      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-        const startDate = start < end ? start : end;
-        const endDate = start < end ? end : start;
-        
-        const newColors = { ...dayColors };
-        const current = new Date(startDate);
-        
-        while (current <= endDate) {
-          const dateStr = current.toISOString().split('T')[0];
-          newColors[dateStr] = selectedItem.color;
-          current.setUTCDate(current.getUTCDate() + 1);
-        }
-
-        setDayColors(newColors);
-      }
+      pushToHistory(fillRange(dayColors, lastClickedDate, date, item.color));
     } else {
-      // Single click
-      const currentColor = dayColors[date];
-      if (currentColor === selectedItem.color) {
-        const newColors = { ...dayColors };
+      const newColors = { ...dayColors };
+      if (newColors[date] === item.color) {
         delete newColors[date];
-        setDayColors(newColors);
       } else {
-        setDayColors({ ...dayColors, [date]: selectedItem.color });
+        newColors[date] = item.color;
       }
+      pushToHistory(newColors);
       setLastClickedDate(date);
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  // ── Clear handlers ─────────────────────────────────────────────────────────
+  const handleClearSelected = () => {
+    if (!selectedColorId) return;
+    const item = legendItems.find(i => i.id === selectedColorId);
+    if (!item) return;
+    const filtered: Record<string, string> = {};
+    for (const date in dayColors) {
+      if (dayColors[date] !== item.color) filtered[date] = dayColors[date];
+    }
+    pushToHistory(filtered);
   };
 
-  // Generate 12 months starting from September (8)
-  const startMonth = 8; // September
-  const months = Array.from({ length: 12 }, (_, i) => {
-    const d = new Date(startYear, startMonth + i, 1);
-    return {
-      year: d.getFullYear(),
-      month: d.getMonth(),
+  const handleClearAll = () => {
+    if (Object.keys(dayColors).length > 0) pushToHistory({});
+  };
+
+  // ── Export / Import ────────────────────────────────────────────────────────
+  const handleExport = () => {
+    const data = { startYear, institutionName, subtitle, dayColors, legendItems, importantDates, settings };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `calendar-${startYear}-${startYear + 1}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      try {
+        const s = JSON.parse(reader.result as string);
+        if (typeof s.startYear === 'number') setStartYear(s.startYear);
+        if (typeof s.institutionName === 'string') setInstitutionName(s.institutionName);
+        if (typeof s.subtitle === 'string') setSubtitle(s.subtitle);
+        if (s.dayColors && typeof s.dayColors === 'object') pushToHistory(s.dayColors);
+        if (Array.isArray(s.legendItems)) setLegendItems(s.legendItems);
+        if (Array.isArray(s.importantDates)) setImportantDates(s.importantDates);
+        if (s.settings && typeof s.settings === 'object') {
+          setSettings(prev => ({ ...DEFAULT_SETTINGS, ...s.settings }));
+        }
+      } catch {
+        alert('Invalid or corrupted calendar file.');
+      }
     };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  // ── Generate months ────────────────────────────────────────────────────────
+  const months = Array.from({ length: settings.numMonths }, (_, i) => {
+    const d = new Date(startYear, settings.startMonth + i, 1);
+    return { year: d.getFullYear(), month: d.getMonth() };
   });
+
+  // Year options for month-range picker
+  const yearOptions = [startYear - 1, startYear, startYear + 1, startYear + 2];
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < colorHistory.length - 1;
 
   return (
     <>
-      {/* Main Interactive View - Hidden on Print */}
+      {/* ── Interactive View (hidden on print) ──────────────────────────── */}
       <div className="min-h-screen bg-gray-100 text-gray-900 font-sans print:hidden">
-        {/* Toolbar */}
-        <div className="bg-white border-b border-gray-200 p-4 sticky top-0 z-10 shadow-sm">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <h1 className="text-lg font-bold text-gray-700">Academic Calendar Builder</h1>
-            
-            <div className="flex items-center gap-4 bg-gray-50 p-2 rounded-lg border border-gray-200">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-600">Range:</span>
-                <input 
-                  type="date" 
-                  value={rangeStart}
-                  onChange={(e) => setRangeStart(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm"
-                />
-                <span className="text-gray-400">to</span>
-                <input 
-                  type="date" 
-                  value={rangeEnd}
-                  onChange={(e) => setRangeEnd(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm"
-                />
-              </div>
-              <button 
-                onClick={handleRangeApply}
-                className="bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-                disabled={!rangeStart || !rangeEnd || !selectedColorId}
-              >
-                Apply Color
-              </button>
-            </div>
 
-            <div className="flex gap-3">
-              <button 
-                onClick={handlePrint}
-                className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition-colors"
-              >
-                <Printer size={18} /> Print / Save PDF
-              </button>
+        {/* ── Sticky Toolbar ─────────────────────────────────────────────── */}
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+          <div className="px-4 py-3">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
+
+              <h1 className="text-lg font-bold text-gray-700 shrink-0">Academic Calendar Builder</h1>
+
+              {/* ── Range Picker ──────────────────────────────────────────── */}
+              <div className="flex flex-col gap-1 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
+                {/* Mode Toggle */}
+                <div className="flex items-center gap-1 text-xs mb-1">
+                  <button
+                    onClick={() => setRangeMode('date')}
+                    className={`px-2.5 py-0.5 rounded font-medium transition-colors ${
+                      rangeMode === 'date'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-500 hover:bg-gray-200'
+                    }`}
+                  >
+                    Date Range
+                  </button>
+                  <button
+                    onClick={() => setRangeMode('month')}
+                    className={`px-2.5 py-0.5 rounded font-medium transition-colors ${
+                      rangeMode === 'month'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-500 hover:bg-gray-200'
+                    }`}
+                  >
+                    Month Range
+                  </button>
+                </div>
+
+                {rangeMode === 'date' ? (
+                  /* Individual Date Pickers */
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <input
+                      type="date"
+                      value={rangeStart}
+                      onChange={(e) => setRangeStart(e.target.value)}
+                      className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    />
+                    <span className="text-gray-400 text-sm">→</span>
+                    <input
+                      type="date"
+                      value={rangeEnd}
+                      onChange={(e) => setRangeEnd(e.target.value)}
+                      className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    />
+                    <button
+                      onClick={handleDateRangeApply}
+                      disabled={!rangeStart || !rangeEnd || !selectedColorId}
+                      className="bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                ) : (
+                  /* Month + Year Selectors */
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Start */}
+                    <select
+                      value={mrStartMonth}
+                      onChange={(e) => setMrStartMonth(parseInt(e.target.value))}
+                      className="border border-gray-300 rounded px-1.5 py-1 text-sm bg-white"
+                    >
+                      {MONTH_FULL.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                    </select>
+                    <select
+                      value={mrStartYear}
+                      onChange={(e) => setMrStartYear(parseInt(e.target.value))}
+                      className="border border-gray-300 rounded px-1.5 py-1 text-sm bg-white"
+                    >
+                      {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                    <span className="text-gray-400 text-sm">→</span>
+                    {/* End */}
+                    <select
+                      value={mrEndMonth}
+                      onChange={(e) => setMrEndMonth(parseInt(e.target.value))}
+                      className="border border-gray-300 rounded px-1.5 py-1 text-sm bg-white"
+                    >
+                      {MONTH_FULL.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                    </select>
+                    <select
+                      value={mrEndYear}
+                      onChange={(e) => setMrEndYear(parseInt(e.target.value))}
+                      className="border border-gray-300 rounded px-1.5 py-1 text-sm bg-white"
+                    >
+                      {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                    <button
+                      onClick={handleMonthRangeApply}
+                      disabled={!selectedColorId}
+                      className="bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Action Buttons ────────────────────────────────────────── */}
+              <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                <button onClick={handleUndo} disabled={!canUndo} title="Undo"
+                  className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 transition-colors">
+                  <Undo2 size={16} />
+                </button>
+                <button onClick={handleRedo} disabled={!canRedo} title="Redo"
+                  className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 transition-colors">
+                  <Redo2 size={16} />
+                </button>
+                <button onClick={handleClearSelected} disabled={!selectedColorId} title="Clear selected color"
+                  className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 transition-colors">
+                  <Eraser size={16} />
+                </button>
+                <button onClick={handleClearAll} title="Clear all colors"
+                  className="px-2.5 py-1.5 rounded-lg border border-red-200 hover:bg-red-50 text-red-500 text-xs font-medium transition-colors">
+                  Clear All
+                </button>
+
+                <div className="w-px h-5 bg-gray-300" />
+
+                <button onClick={handleExport} title="Export as JSON"
+                  className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 text-gray-600 transition-colors">
+                  <Download size={16} />
+                </button>
+                <button onClick={() => importRef.current?.click()} title="Import from JSON"
+                  className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 text-gray-600 transition-colors">
+                  <Upload size={16} />
+                </button>
+                <input ref={importRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+
+                <div className="w-px h-5 bg-gray-300" />
+
+                <button
+                  onClick={() => setShowSettings(!showSettings)} title="Settings"
+                  className={`flex items-center gap-1 px-2.5 py-2 rounded-lg border transition-colors ${
+                    showSettings ? 'bg-blue-50 border-blue-400 text-blue-600' : 'border-gray-300 hover:bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  <Settings size={15} />
+                  <ChevronDown size={11} className={`transition-transform ${showSettings ? 'rotate-180' : ''}`} />
+                </button>
+
+                <button onClick={() => window.print()}
+                  className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition-colors">
+                  <Printer size={17} /> Print / Save PDF
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* ── Collapsible Settings Panel ────────────────────────────────── */}
+          {showSettings && (
+            <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
+              <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-6 text-sm">
+
+                {/* Start Month */}
+                <div className="flex items-center gap-2">
+                  <label className="font-medium text-gray-600 whitespace-nowrap">Start Month:</label>
+                  <select
+                    value={settings.startMonth}
+                    onChange={(e) => setSettings(s => ({ ...s, startMonth: parseInt(e.target.value) }))}
+                    className="border border-gray-300 rounded px-2 py-1 text-sm bg-white"
+                  >
+                    {MONTH_NAMES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                  </select>
+                </div>
+
+                {/* Months to show */}
+                <div className="flex items-center gap-2">
+                  <label className="font-medium text-gray-600 whitespace-nowrap">Months:</label>
+                  <div className="flex gap-1">
+                    {[6, 9, 12].map(n => (
+                      <button key={n} onClick={() => setSettings(s => ({ ...s, numMonths: n }))}
+                        className={`px-2.5 py-1 rounded border text-sm font-medium transition-colors ${
+                          settings.numMonths === n
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >{n}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Header Color */}
+                <div className="flex items-center gap-2">
+                  <label className="font-medium text-gray-600 whitespace-nowrap">Header Color:</label>
+                  <input
+                    type="color"
+                    value={settings.accentColor}
+                    onChange={(e) => setSettings(s => ({ ...s, accentColor: e.target.value }))}
+                    className="w-8 h-8 rounded cursor-pointer border border-gray-300 p-0.5 bg-white"
+                  />
+                  <span className="text-xs text-gray-400">month headers</span>
+                </div>
+
+                {/* Highlight Weekends */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="highlight-weekends"
+                    checked={settings.highlightWeekends}
+                    onChange={(e) => setSettings(s => ({ ...s, highlightWeekends: e.target.checked }))}
+                    className="w-4 h-4 text-blue-600 rounded border-gray-300"
+                  />
+                  <label htmlFor="highlight-weekends" className="font-medium text-gray-600 cursor-pointer">
+                    Highlight Weekends
+                  </label>
+                </div>
+
+                <span className="text-xs text-gray-400 ml-auto italic">All changes auto-saved to browser</span>
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* ── Main Canvas ───────────────────────────────────────────────────── */}
         <main className="max-w-[297mm] mx-auto p-8 bg-white shadow-xl my-8 min-h-[210mm]">
-          <CalendarHeader 
+          <CalendarHeader
             institutionName={institutionName}
             setInstitutionName={setInstitutionName}
             subtitle={subtitle}
@@ -187,12 +508,14 @@ function App() {
                     dayColors={dayColors}
                     legendItems={legendItems}
                     onDayClick={handleDayClick}
+                    accentColor={settings.accentColor}
+                    highlightWeekends={settings.highlightWeekends}
                   />
                 ))}
               </div>
-              
+
               <div className="mt-8">
-                <Legend 
+                <Legend
                   legendItems={legendItems}
                   setLegendItems={setLegendItems}
                   selectedColorId={selectedColorId}
@@ -202,7 +525,7 @@ function App() {
             </div>
 
             <div className="border-l pl-4 border-gray-200 h-full">
-              <ImportantDates 
+              <ImportantDates
                 dates={importantDates}
                 setDates={setImportantDates}
               />
@@ -211,8 +534,8 @@ function App() {
         </main>
       </div>
 
-      {/* Dedicated Print View - Only Visible on Print */}
-      <PrintView 
+      {/* ── Print View ──────────────────────────────────────────────────────── */}
+      <PrintView
         institutionName={institutionName}
         subtitle={subtitle}
         startYear={startYear}
@@ -221,14 +544,13 @@ function App() {
         legendItems={legendItems}
         importantDates={importantDates}
         months={months}
+        accentColor={settings.accentColor}
+        highlightWeekends={settings.highlightWeekends}
       />
-      
+
       <style>{`
         @media print {
-          @page {
-            size: landscape;
-            margin: 5mm;
-          }
+          @page { size: landscape; margin: 5mm; }
           body {
             background: white;
             -webkit-print-color-adjust: exact;
