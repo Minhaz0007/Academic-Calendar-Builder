@@ -1,5 +1,7 @@
-import React, { useRef } from 'react';
-import { Upload, X } from 'lucide-react';
+import React from 'react';
+
+// Embedded default logo — replace src with the actual logo path once saved to public/logo.png
+const DEFAULT_LOGO_SRC = '/logo.png';
 
 interface HeaderProps {
   institutionName: string;
@@ -22,20 +24,11 @@ export const CalendarHeader: React.FC<HeaderProps> = ({
   startYear,
   setStartYear,
   logoUrl,
-  setLogoUrl,
   accentColor = '#a5f3fc',
   headerTextColor = '#000000',
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setLogoUrl(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
+  // Use Supabase-stored logo if user uploaded one, otherwise fall back to the embedded default
+  const effectiveLogo = logoUrl || DEFAULT_LOGO_SRC;
 
   return (
     <header className="mb-6 print:mb-2 font-serif">
@@ -44,34 +37,13 @@ export const CalendarHeader: React.FC<HeaderProps> = ({
         className="flex items-center gap-4 px-5 py-3 rounded-lg print:rounded-none print:px-4 print:py-2"
         style={{ backgroundColor: accentColor }}
       >
-        {/* Logo — left */}
-        <div
-          className="relative w-16 h-16 flex-shrink-0 rounded-full border-2 border-white/50 flex items-center justify-center cursor-pointer overflow-hidden bg-white/20 group print:w-12 print:h-12 print:border print:border-white/30"
-          onClick={() => !logoUrl && fileInputRef.current?.click()}
-          title={logoUrl ? '' : 'Upload logo'}
-        >
-          {logoUrl ? (
-            <>
-              <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
-              <button
-                onClick={(e) => { e.stopPropagation(); setLogoUrl(null); }}
-                className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity print:hidden rounded-full"
-              >
-                <X size={16} className="text-white" />
-              </button>
-            </>
-          ) : (
-            <div className="text-center print:hidden" style={{ color: headerTextColor, opacity: 0.7 }}>
-              <Upload className="mx-auto mb-0.5" size={16} />
-              <span className="text-[9px] leading-none">Logo</span>
-            </div>
-          )}
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            accept="image/png,image/jpeg,image/svg+xml"
-            onChange={handleLogoUpload}
+        {/* Logo — left (fixed, no upload button) */}
+        <div className="relative w-16 h-16 flex-shrink-0 rounded-full border-2 border-white/50 overflow-hidden bg-white/10 print:w-12 print:h-12">
+          <img
+            src={effectiveLogo}
+            alt="School Logo"
+            className="w-full h-full object-contain"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
           />
         </div>
 
@@ -97,15 +69,16 @@ export const CalendarHeader: React.FC<HeaderProps> = ({
 
         {/* Year — right */}
         <div className="text-right flex-shrink-0" style={{ color: headerTextColor }}>
-          <div className="text-[10px] uppercase tracking-wider opacity-75 print:text-[8px]">
+          {/* "Academic Calendar" — same size and weight as the year */}
+          <div className="font-bold text-2xl print:text-xl leading-tight uppercase tracking-wide">
             Academic Calendar
           </div>
-          <div className="flex items-baseline gap-1 justify-end mt-0.5">
+          <div className="flex items-baseline gap-1 justify-end">
             <input
               type="number"
               value={startYear}
               onChange={(e) => setStartYear(parseInt(e.target.value) || new Date().getFullYear())}
-              className="w-16 bg-transparent border-none outline-none text-right font-bold text-2xl print:text-xl print:hidden"
+              className="w-20 bg-transparent border-none outline-none text-right font-bold text-2xl print:text-xl print:hidden"
               style={{ color: headerTextColor }}
             />
             <span className="font-bold text-2xl print:hidden" style={{ color: headerTextColor }}>
