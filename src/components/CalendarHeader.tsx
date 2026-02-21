@@ -62,7 +62,7 @@ export const CalendarHeader: React.FC<HeaderProps> = ({
             value={subtitle}
             onChange={(e) => setSubtitle(e.target.value)}
             placeholder="Address · Phone · Website"
-            className="w-full bg-transparent border-none outline-none text-center text-[11px] print:text-[9px] italic mt-0.5 placeholder-white/50"
+            className="w-full bg-transparent border-none outline-none text-center text-[11px] print:text-[9px] italic mt-0.5 placeholder-white/50 tracking-wide"
             style={{ color: headerTextColor, opacity: 0.85 }}
           />
         </div>

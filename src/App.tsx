@@ -96,7 +96,7 @@ function App() {
   // Core state
   const [startYear, setStartYear] = useState(2025);
   const [institutionName, setInstitutionName] = useState('MADINATUL ULOOM');
-  const [subtitle, setSubtitle] = useState('995 Fillmore Avenue, Buffalo, NY 14211 Tel: (716) 292-5956 www.madinatululoom.org');
+  const [subtitle, setSubtitle] = useState('995 Fillmore Avenue, Buffalo, NY 14211  |  Tel: (716) 292-5956  |  www.madinatululoom.org');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [dayColors, setDayColors] = useState<Record<string, string>>({});
   const [legendItems, setLegendItems] = useState<LegendItem[]>(DEFAULT_LEGEND);
