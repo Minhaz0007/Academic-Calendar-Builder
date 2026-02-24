@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS: CalendarSettings = {
   theme: 'classic',
   dateFontSize: 14,
   dateBold: false,
+  eventsFontSize: 9,
 };
 
 const STORAGE_KEY = 'academicCalendarState_v2';
@@ -773,6 +774,23 @@ function App() {
                   </label>
                 </div>
 
+                <div className="w-px h-5 bg-gray-300" />
+
+                {/* Events font size */}
+                <div className="flex items-center gap-2">
+                  <label className="font-medium text-gray-600 whitespace-nowrap">Events Size:</label>
+                  <input
+                    type="range"
+                    min={6}
+                    max={14}
+                    step={1}
+                    value={settings.eventsFontSize ?? 9}
+                    onChange={(e) => setSettings(s => ({ ...s, eventsFontSize: parseInt(e.target.value) }))}
+                    className="w-24 accent-blue-600"
+                  />
+                  <span className="text-xs text-gray-500 w-6">{settings.eventsFontSize ?? 9}px</span>
+                </div>
+
                 <span className="text-xs text-gray-400 ml-auto italic">Use the Save button to persist changes to the cloud</span>
               </div>
             </div>
@@ -854,6 +872,7 @@ function App() {
                 setPrintLegendItems={setPrintLegendItems}
                 startYear={startYear}
                 startMonth={settings.startMonth}
+                fontSize={settings.eventsFontSize ?? 9}
               />
             </div>
           </div>
@@ -878,6 +897,7 @@ function App() {
         dateBold={settings.dateBold ?? false}
         headerTextColor={activeTheme.headerTextColor}
         theme={activeTheme}
+        eventsFontSize={settings.eventsFontSize ?? 9}
       />
 
       <style>{`
