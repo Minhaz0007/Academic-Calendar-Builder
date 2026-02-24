@@ -74,6 +74,7 @@ interface PrintViewProps {
   dateBold?: boolean;
   headerTextColor?: string;
   theme?: CalendarTheme;
+  eventsFontSize?: number; // base font size for the Important Dates sidebar
 }
 
 export const PrintView: React.FC<PrintViewProps> = ({
@@ -93,7 +94,17 @@ export const PrintView: React.FC<PrintViewProps> = ({
   dateBold = false,
   headerTextColor = '#000000',
   theme,
+  eventsFontSize = 9,
 }) => {
+  // Derived sizes for the sidebar — same formulas as ImportantDates.tsx
+  const fs = eventsFontSize;
+  const evTitleSize   = Math.round(fs * 1.65);
+  const evMonthSize   = Math.round(fs * 1.2);
+  const evLegendTitle = Math.round(fs * 1.35);
+  const evLegendLabel = fs;
+  const evSquareSize  = fs;
+  const evEntryMb     = Math.max(1, Math.round(fs * 0.2));
+  const evHeaderMt    = Math.round(fs * 0.55);
   const cols = months.length <= 6 ? 3 : months.length <= 9 ? 3 : 4;
 
   return (
@@ -203,11 +214,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
             <div style={{ borderBottom: '3px solid black', paddingBottom: '2px', marginBottom: '3px' }}>
               <h3
                 className="font-bold uppercase text-black leading-tight"
-                style={{
-                  fontSize: '10px',
-                  letterSpacing: '0.12em',
-                  fontFamily: SERIF,
-                }}
+                style={{ fontSize: `${evTitleSize}px`, letterSpacing: '0.12em', fontFamily: SERIF }}
               >
                 Important Dates
               </h3>
@@ -215,10 +222,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
           </div>
 
           {/* Entries */}
-          <div
-            className="flex-1"
-            style={{ overflow: 'hidden' }}
-          >
+          <div className="flex-1" style={{ overflow: 'hidden' }}>
             {(() => {
               const monthLabels = computeMonthLabels(importantDates, startMonth, startYear);
               let prevMonth: string | null = null;
@@ -229,11 +233,11 @@ export const PrintView: React.FC<PrintViewProps> = ({
 
                 return (
                   <React.Fragment key={date.id}>
-                    {/* Month header — bold + italic (cursive), title-case, no line */}
+                    {/* Month header — bold + italic */}
                     {showMonthHeader && (
                       <div
                         style={{
-                          marginTop: '5px',
+                          marginTop: `${evHeaderMt}px`,
                           marginBottom: '1px',
                           pageBreakInside: 'avoid',
                           breakInside: 'avoid',
@@ -242,7 +246,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
                         <span
                           style={{
                             fontFamily: SERIF,
-                            fontSize: '8px',
+                            fontSize: `${evMonthSize}px`,
                             fontWeight: 'bold',
                             fontStyle: 'italic',
                             color: '#111827',
@@ -253,22 +257,25 @@ export const PrintView: React.FC<PrintViewProps> = ({
                       </div>
                     )}
 
-                    {/* Entry — normal weight, not italic: "dateRange: description" */}
+                    {/* Entry row */}
                     <div
                       style={{
-                        marginBottom: '1px',
+                        marginBottom: `${evEntryMb}px`,
                         pageBreakInside: 'avoid',
                         breakInside: 'avoid',
-                        lineHeight: '1.25',
+                        lineHeight: '1.2',
+                        backgroundColor: date.highlight ?? 'transparent',
+                        borderRadius: date.highlight ? '2px' : '0',
+                        padding: date.highlight ? '0 2px' : '0',
                       }}
                     >
-                      <span style={{ fontFamily: SERIF, fontSize: '7px', fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937' }}>
+                      <span style={{ fontFamily: SERIF, fontSize: `${fs}px`, fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937' }}>
                         {date.dateRange}
                       </span>
                       {date.dateRange && date.description && (
-                        <span style={{ fontFamily: SERIF, fontSize: '7px', color: '#1f2937' }}>: </span>
+                        <span style={{ fontFamily: SERIF, fontSize: `${fs}px`, color: '#1f2937' }}>: </span>
                       )}
-                      <span style={{ fontFamily: SERIF, fontSize: '7px', fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937' }}>
+                      <span style={{ fontFamily: SERIF, fontSize: `${fs}px`, fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937' }}>
                         {date.description}
                       </span>
                     </div>
@@ -285,47 +292,36 @@ export const PrintView: React.FC<PrintViewProps> = ({
               style={{
                 borderTop: '2.5px solid black',
                 paddingTop: '3px',
-                marginTop: '4px',
+                marginTop: `${Math.round(fs * 0.5)}px`,
                 pageBreakInside: 'avoid',
                 breakInside: 'avoid',
               }}
             >
-              {/* Legend title */}
               <div style={{ borderBottom: '1px solid black', paddingBottom: '1px', marginBottom: '2px' }}>
                 <h4
                   className="font-bold uppercase text-black leading-tight"
-                  style={{
-                    fontSize: '9px',
-                    letterSpacing: '0.1em',
-                    fontFamily: SERIF,
-                  }}
+                  style={{ fontSize: `${evLegendTitle}px`, letterSpacing: '0.1em', fontFamily: SERIF }}
                 >
                   Color Legend
                 </h4>
               </div>
 
-              {/* Legend items — compact */}
-              <div className="flex flex-col" style={{ gap: '2px' }}>
+              <div className="flex flex-col" style={{ gap: `${Math.max(2, Math.round(fs * 0.25))}px` }}>
                 {printLegendItems.map(item => (
                   <div key={item.id} className="flex items-center" style={{ gap: '4px' }}>
                     <span
                       className="inline-block flex-shrink-0"
                       style={{
-                        width: '8px',
-                        height: '8px',
-                        minWidth: '8px',
+                        width: `${evSquareSize}px`,
+                        height: `${evSquareSize}px`,
+                        minWidth: `${evSquareSize}px`,
                         backgroundColor: item.color,
                         border: '0.5px solid rgba(0,0,0,0.3)',
                       }}
                     />
                     <span
                       className="font-medium uppercase text-black leading-tight"
-                      style={{
-                        fontSize: '7px',
-                        fontFamily: SERIF,
-                        letterSpacing: '0.03em',
-                        lineHeight: '1.2',
-                      }}
+                      style={{ fontSize: `${evLegendLabel}px`, fontFamily: SERIF, letterSpacing: '0.03em', lineHeight: '1.2' }}
                     >
                       {item.label}
                     </span>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Highlighter } from 'lucide-react';
 import { ImportantDate, PrintLegendItem } from '../types';
 
 // ── Month helpers ──────────────────────────────────────────────────────────────
@@ -73,6 +73,7 @@ interface ImportantDatesProps {
   setPrintLegendItems: (items: PrintLegendItem[]) => void;
   startYear: number;
   startMonth: number;
+  fontSize?: number; // base font size for the entire section (default 9)
 }
 
 const SERIF = "'Times New Roman', Times, Georgia, serif";
@@ -84,7 +85,18 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
   setPrintLegendItems,
   startYear,
   startMonth,
+  fontSize = 9,
 }) => {
+  // ── Derived sizes (all relative to `fontSize`) ───────────────────────────
+  const fs = fontSize;
+  const titleSize   = Math.round(fs * 1.65);  // section title "Important Dates"
+  const monthSize   = Math.round(fs * 1.2);   // month-group header
+  const legendTitle = Math.round(fs * 1.35);  // "Color Legend" title
+  const legendLabel = Math.round(fs * 1.1);   // legend item labels
+  const squareSize  = Math.round(fs * 2);     // legend color square (px)
+  const entryMb     = Math.max(1, Math.round(fs * 0.2));   // margin-bottom per entry
+  const headerMt    = Math.round(fs * 0.55);  // margin-top for month headers
+
   const addDate = () => {
     setDates([...dates, {
       id: crypto.randomUUID(),
@@ -143,7 +155,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
         <div className="flex-1 border-b-[3px] border-black pb-1">
           <h3
             className="font-bold uppercase text-black leading-tight"
-            style={{ fontSize: '15px', letterSpacing: '0.12em', fontFamily: SERIF }}
+            style={{ fontSize: `${titleSize}px`, letterSpacing: '0.12em', fontFamily: SERIF }}
           >
             Important Dates
           </h3>
@@ -174,50 +186,47 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
           return (
             <React.Fragment key={date.id}>
 
-              {/* ── Month header: bold + italic (cursive), title-case, no comma ── */}
+              {/* ── Month header: bold + italic, title-case ── */}
               {showMonthHeader && (
                 <div
-                  className="mt-3 mb-0.5 first:mt-1"
-                  style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
+                  style={{
+                    marginTop: `${headerMt}px`,
+                    marginBottom: '1px',
+                    pageBreakInside: 'avoid',
+                    breakInside: 'avoid',
+                  }}
                 >
-                  {/* Edit mode — editable input, styled bold+italic */}
                   <input
                     type="text"
                     value={groupLabel ?? ''}
                     onChange={(e) => updateMonthLabel(groupLabel, e.target.value)}
-                    className="bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none w-full print:hidden"
+                    className="bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none w-full"
                     style={{
                       fontFamily: SERIF,
-                      fontSize: '11px',
+                      fontSize: `${monthSize}px`,
                       fontWeight: 'bold',
                       fontStyle: 'italic',
                       color: '#111827',
                     }}
                     title="Click to edit month label"
                   />
-                  {/* Print mode — static bold+italic text */}
-                  <div
-                    className="hidden print:block leading-tight"
-                    style={{
-                      fontFamily: SERIF,
-                      fontSize: '8.5px',
-                      fontWeight: 'bold',
-                      fontStyle: 'italic',
-                      color: '#111827',
-                    }}
-                  >
-                    {groupLabel}
-                  </div>
                 </div>
               )}
 
-              {/* ── Entry: [dateRange] : [description]  — normal weight, not italic ── */}
+              {/* ── Entry row ── */}
               <div
-                className="group mb-1"
-                style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
+                className="group"
+                style={{
+                  marginBottom: `${entryMb}px`,
+                  pageBreakInside: 'avoid',
+                  breakInside: 'avoid',
+                  backgroundColor: date.highlight ?? 'transparent',
+                  borderRadius: date.highlight ? '2px' : '0',
+                  padding: date.highlight ? '0 2px' : '0',
+                }}
               >
-                {/* Edit mode */}
-                <div className="flex items-baseline gap-1 print:hidden">
+                <div className="flex items-baseline gap-1">
+                  {/* Date range */}
                   <input
                     type="text"
                     value={date.dateRange}
@@ -228,7 +237,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
                     className="text-gray-800 bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none"
                     style={{
                       fontFamily: SERIF,
-                      fontSize: '9px',
+                      fontSize: `${fs}px`,
                       fontWeight: 'normal',
                       fontStyle: 'normal',
                       width: '38%',
@@ -236,7 +245,8 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
                     }}
                     placeholder="Dates"
                   />
-                  <span style={{ fontSize: '9px', color: '#374151', flexShrink: 0 }}>:</span>
+                  <span style={{ fontSize: `${fs}px`, color: '#374151', flexShrink: 0 }}>:</span>
+                  {/* Description */}
                   <input
                     type="text"
                     value={date.description}
@@ -247,34 +257,63 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
                     className="text-gray-800 bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none flex-1 min-w-0"
                     style={{
                       fontFamily: SERIF,
-                      fontSize: '9px',
+                      fontSize: `${fs}px`,
                       fontWeight: 'normal',
                       fontStyle: 'normal',
                     }}
                     placeholder="Event name"
                   />
+
+                  {/* ── Highlight color picker ── */}
+                  <label
+                    className="flex-shrink-0 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{
+                      width: `${Math.round(fs * 1.3)}px`,
+                      height: `${Math.round(fs * 1.3)}px`,
+                      backgroundColor: date.highlight ?? '#ffffff',
+                      border: date.highlight
+                        ? `1.5px solid rgba(0,0,0,0.4)`
+                        : `1.5px dashed rgba(0,0,0,0.25)`,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative',
+                      borderRadius: '2px',
+                    }}
+                    title="Highlight color"
+                  >
+                    {!date.highlight && (
+                      <Highlighter
+                        size={Math.round(fs * 0.85)}
+                        style={{ color: 'rgba(0,0,0,0.35)', pointerEvents: 'none' }}
+                      />
+                    )}
+                    <input
+                      type="color"
+                      value={date.highlight ?? '#ffff99'}
+                      onChange={(e) => updateDate(date.id, { highlight: e.target.value })}
+                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                    />
+                  </label>
+                  {/* Clear highlight */}
+                  {date.highlight && (
+                    <button
+                      onClick={() => updateDate(date.id, { highlight: undefined })}
+                      className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-700 leading-none"
+                      style={{ fontSize: `${Math.round(fs * 1.2)}px`, lineHeight: 1 }}
+                      title="Clear highlight"
+                    >
+                      ×
+                    </button>
+                  )}
+
+                  {/* Delete entry */}
                   <button
                     onClick={() => deleteDate(date.id)}
-                    className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-1 print:hidden"
+                    className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-0.5"
                   >
-                    <Trash2 size={11} />
+                    <Trash2 size={Math.round(fs * 1.1)} />
                   </button>
-                </div>
-
-                {/* Print mode — "dateRange: description" in normal style */}
-                <div
-                  className="hidden print:block leading-snug"
-                  style={{ fontFamily: SERIF }}
-                >
-                  <span style={{ fontSize: '7px', fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937' }}>
-                    {date.dateRange}
-                  </span>
-                  {date.dateRange && date.description && (
-                    <span style={{ fontSize: '7px', color: '#1f2937' }}>: </span>
-                  )}
-                  <span style={{ fontSize: '7px', fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937' }}>
-                    {date.description}
-                  </span>
                 </div>
               </div>
             </React.Fragment>
@@ -284,14 +323,19 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
 
       {/* ══ COLOR LEGEND ══ */}
       <div
-        className="flex-shrink-0 mt-3 pt-2"
-        style={{ borderTop: '3px solid black', pageBreakInside: 'avoid', breakInside: 'avoid' }}
+        className="flex-shrink-0 pt-2"
+        style={{
+          marginTop: `${Math.round(fs * 0.4)}px`,
+          borderTop: '3px solid black',
+          pageBreakInside: 'avoid',
+          breakInside: 'avoid',
+        }}
       >
-        <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center justify-between gap-2 mb-1">
           <div className="flex-1 border-b border-black pb-0.5">
             <h4
               className="font-bold uppercase text-black leading-tight"
-              style={{ fontSize: '12px', letterSpacing: '0.12em', fontFamily: SERIF }}
+              style={{ fontSize: `${legendTitle}px`, letterSpacing: '0.12em', fontFamily: SERIF }}
             >
               Color Legend
             </h4>
@@ -305,14 +349,15 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
           </button>
         </div>
 
-        <div className="flex flex-col gap-1.5 print:gap-1">
+        <div className="flex flex-col" style={{ gap: `${Math.max(2, Math.round(fs * 0.3))}px` }}>
           {printLegendItems.map(item => (
             <div key={item.id} className="group flex items-center gap-2">
-              {/* Edit mode: clickable color square */}
+              {/* Color swatch (edit mode) */}
               <label
-                className="flex-shrink-0 cursor-pointer print:hidden"
+                className="flex-shrink-0 cursor-pointer"
                 style={{
-                  width: '18px', height: '18px',
+                  width: `${squareSize}px`,
+                  height: `${squareSize}px`,
                   backgroundColor: item.color,
                   border: '1.5px solid rgba(0,0,0,0.3)',
                   display: 'block',
@@ -326,41 +371,25 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
                   className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
                 />
               </label>
-              {/* Print mode: colored square */}
-              <span
-                className="hidden print:inline-block flex-shrink-0"
-                style={{
-                  width: '10px', height: '10px', minWidth: '10px',
-                  backgroundColor: item.color,
-                  border: '0.75px solid rgba(0,0,0,0.35)',
-                }}
-              />
-              {/* Edit mode: label input */}
+              {/* Label */}
               <input
                 type="text"
                 value={item.label}
                 onChange={(e) => updateLegendItem(item.id, { label: e.target.value })}
-                className="font-medium text-black bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none flex-1 min-w-0 print:hidden"
-                style={{ fontSize: '10px', fontFamily: SERIF }}
+                className="font-medium text-black bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none flex-1 min-w-0"
+                style={{ fontSize: `${legendLabel}px`, fontFamily: SERIF }}
                 placeholder="Label"
               />
-              {/* Print mode: label */}
-              <span
-                className="hidden print:inline font-medium text-black uppercase leading-tight"
-                style={{ fontSize: '7.5px', fontFamily: SERIF, letterSpacing: '0.05em' }}
-              >
-                {item.label}
-              </span>
               <button
                 onClick={() => deleteLegendItem(item.id)}
-                className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity print:hidden flex-shrink-0"
+                className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
               >
                 <Trash2 size={11} />
               </button>
             </div>
           ))}
           {printLegendItems.length === 0 && (
-            <p className="text-gray-400 italic print:hidden" style={{ fontSize: '11px' }}>
+            <p className="text-gray-400 italic print:hidden" style={{ fontSize: `${legendLabel}px` }}>
               Click + to add legend colors.
             </p>
           )}

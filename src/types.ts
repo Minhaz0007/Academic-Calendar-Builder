@@ -21,6 +21,7 @@ export interface ImportantDate {
   color?: string;      // custom color for manual entries (used in print legend)
   firstDate?: string;  // earliest date (YYYY-MM-DD) for month grouping (auto-entries only)
   customMonthLabel?: string; // user-overridden month group header (e.g. "SEPTEMBER, 2025")
+  highlight?: string;  // background highlight color for this entry row
 }
 
 export interface CalendarSettings {
@@ -31,6 +32,7 @@ export interface CalendarSettings {
   theme: string; // theme id from themes.ts
   dateFontSize: number; // font size (px) for day numbers in grid
   dateBold: boolean; // render day numbers bold
+  eventsFontSize?: number; // base font size (px) for the Important Dates sidebar
 }
 
 export interface PrintLegendItem {
