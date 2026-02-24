@@ -398,8 +398,13 @@ const PrintMonth: React.FC<{
 
       {/* Day grid */}
       <div
-        className="grid grid-cols-7 flex-1"
-        style={{ gridTemplateRows: 'auto repeat(6, 1fr)', fontSize: `${dateFontSize}px`, border }}
+        className="grid grid-cols-7 flex-1 gap-px"
+        style={{
+          gridTemplateRows: 'auto repeat(6, 1fr)',
+          fontSize: `${dateFontSize}px`,
+          border,
+          backgroundColor: theme?.gridGap ?? '#e5e7eb',
+        }}
       >
         {/* Weekday headers */}
         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
@@ -410,7 +415,6 @@ const PrintMonth: React.FC<{
               backgroundColor: accentColor,
               color: headerTextColor,
               borderBottom: border,
-              borderRight: i < 6 ? cellBorder : 'none',
             }}
           >
             {d}
@@ -447,8 +451,6 @@ const PrintMonth: React.FC<{
               style={{
                 backgroundColor: bgColor,
                 color: textColor,
-                borderRight: colIdx < 6 ? cellBorder : 'none',
-                borderBottom: cellBorder,
                 fontWeight: dateBold || colorId ? 700 : 400,
                 borderRadius: cellRadius,
               }}
