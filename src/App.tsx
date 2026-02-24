@@ -118,6 +118,7 @@ function App() {
   // UI / interaction state
   const [selectedColorId, setSelectedColorId] = useState<string | null>(DEFAULT_LEGEND[0].id);
   const [showSettings, setShowSettings] = useState(false);
+  const [eraseMode, setEraseMode] = useState(false);
 
   // Click-click range selection
   const [pendingRangeStart, setPendingRangeStart] = useState<string | null>(null);
@@ -145,9 +146,10 @@ function App() {
 
   const importRef = useRef<HTMLInputElement>(null);
 
-  // Clear pending range when selected color changes
+  // Clear pending range when selected color changes; also exit erase mode
   useEffect(() => {
     setPendingRangeStart(null);
+    setEraseMode(false);
   }, [selectedColorId]);
 
   // Escape key cancels pending range start
@@ -260,6 +262,28 @@ function App() {
     return result;
   };
 
+  // Erase a contiguous date range — mirrors fillRange but deletes instead of assigns
+  const eraseRange = (
+    base: Record<string, string>,
+    fromISO: string,
+    toISO: string,
+  ): Record<string, string> => {
+    const a = new Date(fromISO + 'T00:00:00Z');
+    const b = new Date(toISO + 'T00:00:00Z');
+    if (isNaN(a.getTime()) || isNaN(b.getTime())) return base;
+    const s = a <= b ? a : b;
+    const e = a <= b ? b : a;
+    const result = { ...base };
+    const cur = new Date(s);
+    let guard = 0;
+    while (cur <= e && guard < 1000) {
+      delete result[cur.toISOString().split('T')[0]];
+      cur.setUTCDate(cur.getUTCDate() + 1);
+      guard++;
+    }
+    return result;
+  };
+
   // ── Range handlers ─────────────────────────────────────────────────────────
   const handleDateRangeApply = () => {
     if (!rangeStart || !rangeEnd || !selectedColorId) return;
@@ -283,17 +307,32 @@ function App() {
 
   // ── Click-click range selection ────────────────────────────────────────────
   const handleDayClick = (date: string) => {
+    // ── Erase mode: remove color from clicked / range of cells ──
+    if (eraseMode) {
+      if (!pendingRangeStart) {
+        setPendingRangeStart(date);
+      } else {
+        if (date === pendingRangeStart) {
+          const newColors = { ...dayColors };
+          delete newColors[date];
+          pushToHistory(newColors);
+        } else {
+          pushToHistory(eraseRange(dayColors, pendingRangeStart, date));
+        }
+        setPendingRangeStart(null);
+      }
+      return;
+    }
+
+    // ── Paint mode (normal) ──
     if (!selectedColorId) return;
     const item = legendItems.find(i => i.id === selectedColorId);
     if (!item) return;
 
     if (!pendingRangeStart) {
-      // First click: set range start anchor
       setPendingRangeStart(date);
     } else {
-      // Second click: apply range
       if (date === pendingRangeStart) {
-        // Same date clicked: toggle single day
         const newColors = { ...dayColors };
         if (newColors[date] === item.id) {
           delete newColors[date];
@@ -302,7 +341,6 @@ function App() {
         }
         pushToHistory(newColors);
       } else {
-        // Different date: fill range
         pushToHistory(fillRange(dayColors, pendingRangeStart, date, item.id));
       }
       setPendingRangeStart(null);
@@ -538,8 +576,15 @@ function App() {
                   className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 transition-colors">
                   <Redo2 size={16} />
                 </button>
-                <button onClick={handleClearSelected} disabled={!selectedColorId} title="Clear selected color"
-                  className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 transition-colors">
+                <button
+                  onClick={() => { setEraseMode(m => !m); setPendingRangeStart(null); }}
+                  title={eraseMode ? 'Erase mode ON — click cells to remove color' : 'Enable erase mode'}
+                  className={`p-2 rounded-lg border transition-colors ${
+                    eraseMode
+                      ? 'bg-orange-500 text-white border-orange-500 hover:bg-orange-600'
+                      : 'border-gray-300 hover:bg-gray-100 text-gray-600'
+                  }`}
+                >
                   <Eraser size={16} />
                 </button>
                 <button onClick={handleClearAll} title="Clear all colors"
@@ -783,6 +828,7 @@ function App() {
                     pendingRangeStart={pendingRangeStart}
                     hoveredDate={hoveredDate}
                     previewColor={previewColor}
+                    eraseMode={eraseMode}
                     theme={activeTheme}
                     dateFontSize={settings.dateFontSize ?? 14}
                     dateBold={settings.dateBold ?? false}
