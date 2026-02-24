@@ -17,17 +17,21 @@ const FULL_MONTHS = [
 const SERIF = "'Times New Roman', Times, Georgia, serif";
 
 function getMonthLabel(date: ImportantDate, startMonth: number, startYear: number): string | null {
+  // Custom user-override takes priority
+  if (date.customMonthLabel !== undefined) return date.customMonthLabel;
+
   if (date.firstDate) {
     const d = new Date(date.firstDate + 'T00:00:00Z');
     if (!isNaN(d.getTime())) {
       return `${FULL_MONTHS[d.getUTCMonth()]}, ${d.getUTCFullYear()}`;
     }
   }
+  // Fix: months >= startMonth belong to startYear; months < startMonth wrap to startYear+1.
   const firstLine = (date.dateRange || '').split('\n')[0].trim();
   for (const abbr of MONTH_ABBR_KEYS) {
     if (firstLine.startsWith(abbr)) {
       const monthIdx = MONTH_ABBR_KEYS.indexOf(abbr);
-      const year = monthIdx > startMonth ? startYear : startYear + 1;
+      const year = monthIdx >= startMonth ? startYear : startYear + 1;
       return `${MONTH_ABBR_MAP[abbr]}, ${year}`;
     }
   }
@@ -205,10 +209,9 @@ export const PrintView: React.FC<PrintViewProps> = ({
 
                 return (
                   <React.Fragment key={date.id}>
-                    {/* Month section header */}
+                    {/* Month section header — same weight/size as event names, no horizontal line */}
                     {showMonthHeader && (
                       <div
-                        className="flex items-center gap-1"
                         style={{
                           marginTop: '6px',
                           marginBottom: '2px',
@@ -217,47 +220,42 @@ export const PrintView: React.FC<PrintViewProps> = ({
                         }}
                       >
                         <span
-                          className="font-bold uppercase text-gray-700 whitespace-nowrap flex-shrink-0"
+                          className="font-bold uppercase text-black"
                           style={{
-                            fontSize: '6px',
-                            letterSpacing: '0.15em',
+                            fontSize: '7.5px',
+                            letterSpacing: '0.05em',
                             fontFamily: SERIF,
                           }}
                         >
                           {monthLabel}
                         </span>
-                        <div style={{ flex: 1, height: '0.5px', backgroundColor: '#9ca3af' }} />
                       </div>
                     )}
 
-                    {/* Entry */}
+                    {/* Entry: [dateRange]: DESCRIPTION */}
                     <div
                       style={{
-                        marginBottom: '4px',
+                        marginBottom: '3px',
                         pageBreakInside: 'avoid',
                         breakInside: 'avoid',
+                        lineHeight: '1.3',
                       }}
                     >
-                      <div
-                        className="font-bold uppercase text-black leading-tight"
-                        style={{
-                          fontSize: '7.5px',
-                          letterSpacing: '0.04em',
-                          fontFamily: SERIF,
-                        }}
-                      >
-                        {date.description}
-                      </div>
-                      <div
-                        className="text-gray-800 whitespace-pre-wrap leading-snug"
-                        style={{
-                          fontSize: '7px',
-                          fontFamily: SERIF,
-                          marginTop: '1px',
-                        }}
+                      <span
+                        className="text-gray-800"
+                        style={{ fontSize: '7px', fontFamily: SERIF }}
                       >
                         {date.dateRange}
-                      </div>
+                      </span>
+                      {date.dateRange && date.description && (
+                        <span className="text-gray-800" style={{ fontSize: '7px', fontFamily: SERIF }}>: </span>
+                      )}
+                      <span
+                        className="font-bold uppercase text-black"
+                        style={{ fontSize: '7.5px', fontFamily: SERIF }}
+                      >
+                        {date.description}
+                      </span>
                     </div>
                   </React.Fragment>
                 );
@@ -277,12 +275,12 @@ export const PrintView: React.FC<PrintViewProps> = ({
                 breakInside: 'avoid',
               }}
             >
-              {/* Legend title */}
+              {/* Legend title — same bold style as Important Dates header */}
               <div style={{ borderBottom: '1px solid black', paddingBottom: '2px', marginBottom: '4px' }}>
                 <h4
                   className="font-bold uppercase text-black leading-tight"
                   style={{
-                    fontSize: '9px',
+                    fontSize: '10px',
                     letterSpacing: '0.12em',
                     fontFamily: SERIF,
                   }}
