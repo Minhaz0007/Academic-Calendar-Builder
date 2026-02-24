@@ -32,7 +32,12 @@ function getMonthLabel(date: ImportantDate, startMonth: number, startYear: numbe
   for (const abbr of MONTH_ABBR_KEYS) {
     if (firstLine.startsWith(abbr)) {
       const monthIdx = MONTH_ABBR_KEYS.indexOf(abbr);
-      const year = monthIdx >= startMonth ? startYear : startYear + 1;
+      // If the date string contains an explicit 4-digit year (e.g. "Sep 2, 2026"), use it
+      // directly rather than guessing from startYear — prevents Sep 2026 → 2025 confusion.
+      const explicitYear = firstLine.match(/\b(20\d{2})\b/);
+      const year = explicitYear
+        ? parseInt(explicitYear[1], 10)
+        : monthIdx >= startMonth ? startYear : startYear + 1;
       return `${MONTH_ABBR_MAP[abbr]} ${year}`;
     }
   }
