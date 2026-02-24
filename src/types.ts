@@ -20,6 +20,7 @@ export interface ImportantDate {
   isDateRangeCustomized?: boolean;   // true when user has manually edited the auto-entry date range
   color?: string;      // custom color for manual entries (used in print legend)
   firstDate?: string;  // earliest date (YYYY-MM-DD) for month grouping (auto-entries only)
+  customMonthLabel?: string; // user-overridden month group header (e.g. "SEPTEMBER, 2025")
 }
 
 export interface CalendarSettings {

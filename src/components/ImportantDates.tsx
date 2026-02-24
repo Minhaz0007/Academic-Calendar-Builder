@@ -16,19 +16,23 @@ const FULL_MONTHS = [
 
 /** Returns month+year label like "DECEMBER, 2025" for grouping headers. */
 function getMonthLabel(date: ImportantDate, startMonth: number, startYear: number): string | null {
-  // Auto-entries store their earliest calendar date
+  // Custom user-override takes priority
+  if (date.customMonthLabel !== undefined) return date.customMonthLabel;
+
+  // Auto-entries: use firstDate
   if (date.firstDate) {
     const d = new Date(date.firstDate + 'T00:00:00Z');
     if (!isNaN(d.getTime())) {
       return `${FULL_MONTHS[d.getUTCMonth()]}, ${d.getUTCFullYear()}`;
     }
   }
-  // Manual entries: parse month abbreviation from the first line of dateRange.
+  // Manual entries: parse month abbreviation from first line of dateRange.
+  // Fix: months >= startMonth belong to startYear; months < startMonth wrap to startYear+1.
   const firstLine = (date.dateRange || '').split('\n')[0].trim();
   for (const abbr of MONTH_ABBR_KEYS) {
     if (firstLine.startsWith(abbr)) {
       const monthIdx = MONTH_ABBR_KEYS.indexOf(abbr);
-      const year = monthIdx > startMonth ? startYear : startYear + 1;
+      const year = monthIdx >= startMonth ? startYear : startYear + 1;
       return `${MONTH_ABBR_MAP[abbr]}, ${year}`;
     }
   }
@@ -43,6 +47,8 @@ interface ImportantDatesProps {
   startYear: number;
   startMonth: number;
 }
+
+const SERIF = "'Times New Roman', Times, Georgia, serif";
 
 export const ImportantDates: React.FC<ImportantDatesProps> = ({
   dates,
@@ -69,6 +75,18 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
     setDates(dates.filter(d => d.id !== id));
   };
 
+  /** When user edits a month-group header, apply the new label to ALL entries in that group. */
+  const updateMonthLabel = (currentLabel: string | null, newLabel: string) => {
+    if (currentLabel === null) return;
+    setDates(dates.map(d => {
+      const dLabel = getMonthLabel(d, startMonth, startYear);
+      if (dLabel === currentLabel) {
+        return { ...d, customMonthLabel: newLabel };
+      }
+      return d;
+    }));
+  };
+
   const addLegendItem = () => {
     const newItem: PrintLegendItem = {
       id: crypto.randomUUID(),
@@ -92,7 +110,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
   return (
     <div
       className="bg-white h-full print:shadow-none print:border-none print:p-0 flex flex-col"
-      style={{ fontFamily: "'Times New Roman', Times, Georgia, serif" }}
+      style={{ fontFamily: SERIF }}
     >
 
       {/* ══════════════════════════════════════════════════════
@@ -104,11 +122,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
         <div className="flex-1 border-b-[3px] border-black pb-1">
           <h3
             className="font-bold uppercase text-black leading-tight"
-            style={{
-              fontSize: '15px',
-              letterSpacing: '0.12em',
-              fontFamily: "'Times New Roman', Times, Georgia, serif",
-            }}
+            style={{ fontSize: '15px', letterSpacing: '0.12em', fontFamily: SERIF }}
           >
             Important Dates
           </h3>
@@ -116,7 +130,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
         <button
           onClick={addDate}
           className="text-sm flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium print:hidden mt-0.5 flex-shrink-0"
-          title="Add manual entry"
+          title="Add entry"
         >
           <Plus size={16} />
         </button>
@@ -133,40 +147,71 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
         {dates.map((date) => {
           const isAuto = !!date.legendItemId;
 
-          // Month grouping header
           const monthLabel = getMonthLabel(date, startMonth, startYear);
           const showMonthHeader = monthLabel !== null && monthLabel !== prevMonthLabel;
+          const groupLabel = monthLabel; // capture before updating prevMonthLabel
           prevMonthLabel = monthLabel;
 
           return (
             <React.Fragment key={date.id}>
+
               {/* ── Month section header ── */}
               {showMonthHeader && (
                 <div
-                  className="flex items-center gap-1.5 mt-3 mb-1 first:mt-1"
+                  className="mt-3 mb-1 first:mt-1"
                   style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
                 >
-                  <span
-                    className="font-bold uppercase text-gray-700 whitespace-nowrap flex-shrink-0"
+                  {/* Edit-mode: editable input */}
+                  <input
+                    type="text"
+                    value={groupLabel ?? ''}
+                    onChange={(e) => updateMonthLabel(groupLabel, e.target.value)}
+                    className="font-bold uppercase text-black bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none w-full print:hidden"
+                    style={{
+                      fontSize: '10px',
+                      letterSpacing: '0.05em',
+                      fontFamily: SERIF,
+                    }}
+                    title="Click to edit month label"
+                  />
+                  {/* Print-mode: static text */}
+                  <div
+                    className="hidden print:block font-bold uppercase text-black leading-tight"
                     style={{
                       fontSize: '8px',
-                      letterSpacing: '0.15em',
-                      fontFamily: "'Times New Roman', Times, Georgia, serif",
+                      letterSpacing: '0.05em',
+                      fontFamily: SERIF,
                     }}
                   >
-                    {monthLabel}
-                  </span>
-                  <div className="flex-1 h-px bg-gray-400" />
+                    {groupLabel}
+                  </div>
                 </div>
               )}
 
-              {/* ── Entry row ── */}
+              {/* ── Entry row: [dateRange] : [description] ── */}
               <div
-                className="group mb-1.5"
+                className="group mb-1"
                 style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
               >
-                {/* Description row */}
-                <div className="flex items-start justify-between gap-1">
+                {/* Edit-mode: two inline inputs with ": " separator */}
+                <div className="flex items-baseline gap-1 print:hidden">
+                  <input
+                    type="text"
+                    value={date.dateRange}
+                    onChange={(e) => updateDate(date.id, {
+                      dateRange: e.target.value,
+                      ...(isAuto ? { isDateRangeCustomized: true } : {}),
+                    })}
+                    className="text-gray-700 bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none"
+                    style={{
+                      fontSize: '9px',
+                      fontFamily: SERIF,
+                      width: '38%',
+                      flexShrink: 0,
+                    }}
+                    placeholder="Dates"
+                  />
+                  <span style={{ fontSize: '9px', color: '#374151', flexShrink: 0 }}>:</span>
                   <input
                     type="text"
                     value={date.description}
@@ -174,59 +219,41 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
                       description: e.target.value,
                       ...(isAuto ? { isDescriptionCustomized: true } : {}),
                     })}
-                    className="font-bold uppercase text-black bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none w-full print:hidden"
+                    className="font-bold text-black bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none flex-1 min-w-0"
                     style={{
-                      fontSize: '10px',
-                      letterSpacing: '0.05em',
-                      fontFamily: "'Times New Roman', Times, Georgia, serif",
+                      fontSize: '9px',
+                      fontFamily: SERIF,
                     }}
                     placeholder="Event name"
                   />
-                  {/* Print-only description */}
-                  <span
-                    className="hidden print:block font-bold uppercase text-black flex-1 min-w-0 leading-tight"
-                    style={{
-                      fontSize: '8px',
-                      letterSpacing: '0.05em',
-                      fontFamily: "'Times New Roman', Times, Georgia, serif",
-                    }}
-                  >
-                    {date.description}
-                  </span>
-
-                  {/* Delete button */}
                   <button
                     onClick={() => deleteDate(date.id)}
-                    className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity print:hidden flex-shrink-0 mt-px"
+                    className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-1"
                   >
                     <Trash2 size={11} />
                   </button>
                 </div>
 
-                {/* Date range */}
-                <textarea
-                  value={date.dateRange}
-                  onChange={(e) => updateDate(date.id, {
-                    dateRange: e.target.value,
-                    ...(isAuto ? { isDateRangeCustomized: true } : {}),
-                  })}
-                  className="text-gray-700 bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none w-full resize-none overflow-hidden leading-snug print:hidden"
-                  style={{
-                    fontSize: '9px',
-                    fontFamily: "'Times New Roman', Times, Georgia, serif",
-                  }}
-                  placeholder="List dates here…"
-                  rows={Math.max(1, (date.dateRange || '').split('\n').length)}
-                />
-                {/* Print-only date range */}
+                {/* Print-mode: combined "dateRange: DESCRIPTION" */}
                 <div
-                  className="hidden print:block text-gray-700 whitespace-pre-wrap leading-snug"
-                  style={{
-                    fontSize: '7.5px',
-                    fontFamily: "'Times New Roman', Times, Georgia, serif",
-                  }}
+                  className="hidden print:block leading-snug"
+                  style={{ fontFamily: SERIF }}
                 >
-                  {date.dateRange}
+                  <span
+                    className="text-gray-800"
+                    style={{ fontSize: '7px' }}
+                  >
+                    {date.dateRange}
+                  </span>
+                  {date.dateRange && date.description && (
+                    <span className="text-gray-800" style={{ fontSize: '7px' }}>: </span>
+                  )}
+                  <span
+                    className="font-bold uppercase text-black"
+                    style={{ fontSize: '7.5px' }}
+                  >
+                    {date.description}
+                  </span>
                 </div>
               </div>
             </React.Fragment>
@@ -250,11 +277,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
           <div className="flex-1 border-b border-black pb-0.5">
             <h4
               className="font-bold uppercase text-black leading-tight"
-              style={{
-                fontSize: '12px',
-                letterSpacing: '0.12em',
-                fontFamily: "'Times New Roman', Times, Georgia, serif",
-              }}
+              style={{ fontSize: '12px', letterSpacing: '0.12em', fontFamily: SERIF }}
             >
               Color Legend
             </h4>
@@ -273,13 +296,12 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
           {printLegendItems.map(item => (
             <div key={item.id} className="group flex items-center gap-2">
 
-              {/* ── Edit mode: color picker ── */}
+              {/* Edit mode: clickable color square */}
               <label
                 className="flex-shrink-0 cursor-pointer print:hidden"
                 title="Click to pick color"
                 style={{
-                  width: '18px',
-                  height: '18px',
+                  width: '18px', height: '18px',
                   backgroundColor: item.color,
                   border: '1.5px solid rgba(0,0,0,0.3)',
                   display: 'block',
@@ -291,49 +313,38 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
                   value={item.color}
                   onChange={(e) => updateLegendItem(item.id, { color: e.target.value })}
                   className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                  title="Pick color"
                 />
               </label>
 
-              {/* ── Print mode: colored square ── */}
+              {/* Print mode: colored square */}
               <span
                 className="hidden print:inline-block flex-shrink-0"
                 style={{
-                  width: '10px',
-                  height: '10px',
-                  minWidth: '10px',
+                  width: '10px', height: '10px', minWidth: '10px',
                   backgroundColor: item.color,
                   border: '0.75px solid rgba(0,0,0,0.35)',
                 }}
               />
 
-              {/* ── Edit mode: label input ── */}
+              {/* Edit mode: label input */}
               <input
                 type="text"
                 value={item.label}
                 onChange={(e) => updateLegendItem(item.id, { label: e.target.value })}
                 className="font-medium text-black bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none flex-1 min-w-0 print:hidden"
-                style={{
-                  fontSize: '10px',
-                  fontFamily: "'Times New Roman', Times, Georgia, serif",
-                  letterSpacing: '0.03em',
-                }}
+                style={{ fontSize: '10px', fontFamily: SERIF, letterSpacing: '0.03em' }}
                 placeholder="Label"
               />
 
-              {/* ── Print mode: label text ── */}
+              {/* Print mode: label text */}
               <span
                 className="hidden print:inline font-medium text-black uppercase leading-tight"
-                style={{
-                  fontSize: '7.5px',
-                  fontFamily: "'Times New Roman', Times, Georgia, serif",
-                  letterSpacing: '0.05em',
-                }}
+                style={{ fontSize: '7.5px', fontFamily: SERIF, letterSpacing: '0.05em' }}
               >
                 {item.label}
               </span>
 
-              {/* Delete — edit view only */}
+              {/* Delete */}
               <button
                 onClick={() => deleteLegendItem(item.id)}
                 className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity print:hidden flex-shrink-0"
@@ -344,10 +355,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
           ))}
 
           {printLegendItems.length === 0 && (
-            <p
-              className="text-gray-400 italic print:hidden"
-              style={{ fontSize: '11px' }}
-            >
+            <p className="text-gray-400 italic print:hidden" style={{ fontSize: '11px' }}>
               Click + to add legend colors.
             </p>
           )}
