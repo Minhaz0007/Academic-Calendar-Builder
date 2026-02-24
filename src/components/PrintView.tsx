@@ -26,12 +26,15 @@ function getMonthLabel(date: ImportantDate, startMonth: number, startYear: numbe
       return `${FULL_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
     }
   }
-  // Fix: months >= startMonth belong to startYear; months < startMonth wrap to startYear+1.
   const firstLine = (date.dateRange || '').split('\n')[0].trim();
   for (const abbr of MONTH_ABBR_KEYS) {
     if (firstLine.startsWith(abbr)) {
       const monthIdx = MONTH_ABBR_KEYS.indexOf(abbr);
-      const year = monthIdx >= startMonth ? startYear : startYear + 1;
+      // Prefer an explicit 4-digit year embedded in the date string (e.g. "Sep 2, 2026")
+      const explicitYear = firstLine.match(/\b(20\d{2})\b/);
+      const year = explicitYear
+        ? parseInt(explicitYear[1], 10)
+        : monthIdx >= startMonth ? startYear : startYear + 1;
       return `${MONTH_ABBR_MAP[abbr]} ${year}`;
     }
   }
@@ -181,7 +184,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
 
           {/* ── IMPORTANT DATES ── */}
           <div className="flex-shrink-0">
-            <div style={{ borderBottom: '3px solid black', paddingBottom: '3px', marginBottom: '5px' }}>
+            <div style={{ borderBottom: '3px solid black', paddingBottom: '2px', marginBottom: '3px' }}>
               <h3
                 className="font-bold uppercase text-black leading-tight"
                 style={{
@@ -213,8 +216,8 @@ export const PrintView: React.FC<PrintViewProps> = ({
                     {showMonthHeader && (
                       <div
                         style={{
-                          marginTop: '6px',
-                          marginBottom: '2px',
+                          marginTop: '5px',
+                          marginBottom: '1px',
                           pageBreakInside: 'avoid',
                           breakInside: 'avoid',
                         }}
@@ -222,7 +225,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
                         <span
                           style={{
                             fontFamily: SERIF,
-                            fontSize: '8.5px',
+                            fontSize: '8px',
                             fontWeight: 'bold',
                             fontStyle: 'italic',
                             color: '#111827',
@@ -236,10 +239,10 @@ export const PrintView: React.FC<PrintViewProps> = ({
                     {/* Entry — normal weight, not italic: "dateRange: description" */}
                     <div
                       style={{
-                        marginBottom: '3px',
+                        marginBottom: '1px',
                         pageBreakInside: 'avoid',
                         breakInside: 'avoid',
-                        lineHeight: '1.3',
+                        lineHeight: '1.25',
                       }}
                     >
                       <span style={{ fontFamily: SERIF, fontSize: '7px', fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937' }}>
@@ -263,20 +266,20 @@ export const PrintView: React.FC<PrintViewProps> = ({
             <div
               className="flex-shrink-0"
               style={{
-                borderTop: '3px solid black',
-                paddingTop: '5px',
-                marginTop: '5px',
+                borderTop: '2.5px solid black',
+                paddingTop: '3px',
+                marginTop: '4px',
                 pageBreakInside: 'avoid',
                 breakInside: 'avoid',
               }}
             >
-              {/* Legend title — same bold style as Important Dates header */}
-              <div style={{ borderBottom: '1px solid black', paddingBottom: '2px', marginBottom: '4px' }}>
+              {/* Legend title */}
+              <div style={{ borderBottom: '1px solid black', paddingBottom: '1px', marginBottom: '2px' }}>
                 <h4
                   className="font-bold uppercase text-black leading-tight"
                   style={{
-                    fontSize: '10px',
-                    letterSpacing: '0.12em',
+                    fontSize: '9px',
+                    letterSpacing: '0.1em',
                     fontFamily: SERIF,
                   }}
                 >
@@ -284,26 +287,27 @@ export const PrintView: React.FC<PrintViewProps> = ({
                 </h4>
               </div>
 
-              {/* Legend items */}
-              <div className="flex flex-col" style={{ gap: '3px' }}>
+              {/* Legend items — compact */}
+              <div className="flex flex-col" style={{ gap: '2px' }}>
                 {printLegendItems.map(item => (
-                  <div key={item.id} className="flex items-center" style={{ gap: '5px' }}>
+                  <div key={item.id} className="flex items-center" style={{ gap: '4px' }}>
                     <span
                       className="inline-block flex-shrink-0"
                       style={{
-                        width: '10px',
-                        height: '10px',
-                        minWidth: '10px',
+                        width: '8px',
+                        height: '8px',
+                        minWidth: '8px',
                         backgroundColor: item.color,
-                        border: '0.75px solid rgba(0,0,0,0.35)',
+                        border: '0.5px solid rgba(0,0,0,0.3)',
                       }}
                     />
                     <span
                       className="font-medium uppercase text-black leading-tight"
                       style={{
-                        fontSize: '7.5px',
+                        fontSize: '7px',
                         fontFamily: SERIF,
-                        letterSpacing: '0.04em',
+                        letterSpacing: '0.03em',
+                        lineHeight: '1.2',
                       }}
                     >
                       {item.label}
