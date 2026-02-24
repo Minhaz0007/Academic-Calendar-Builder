@@ -14,6 +14,8 @@ const FULL_MONTHS = [
   'JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER',
 ];
 
+const SERIF = "'Times New Roman', Times, Georgia, serif";
+
 function getMonthLabel(date: ImportantDate, startMonth: number, startYear: number): string | null {
   if (date.firstDate) {
     const d = new Date(date.firstDate + 'T00:00:00Z');
@@ -21,7 +23,6 @@ function getMonthLabel(date: ImportantDate, startMonth: number, startYear: numbe
       return `${FULL_MONTHS[d.getUTCMonth()]}, ${d.getUTCFullYear()}`;
     }
   }
-  // Months strictly after startMonth belong to startYear; at or before wrap to startYear + 1.
   const firstLine = (date.dateRange || '').split('\n')[0].trim();
   for (const abbr of MONTH_ABBR_KEYS) {
     if (firstLine.startsWith(abbr)) {
@@ -74,8 +75,12 @@ export const PrintView: React.FC<PrintViewProps> = ({
 
   return (
     <div
-      className="hidden print:flex print:flex-col w-full h-screen bg-white text-black overflow-hidden box-border"
-      style={{ fontFamily: theme?.fontFamily ?? "ui-serif, Georgia, serif" }}
+      className="hidden print:flex print:flex-col w-full bg-white text-black box-border"
+      style={{
+        fontFamily: theme?.fontFamily ?? "ui-serif, Georgia, serif",
+        height: '100vh',
+        overflow: 'hidden',
+      }}
     >
 
       {/* ── Banner Header ── */}
@@ -126,10 +131,16 @@ export const PrintView: React.FC<PrintViewProps> = ({
       </header>
 
       {/* ── Body ── */}
-      <div className="flex flex-1 gap-1.5 px-2 pb-1.5 min-h-0 overflow-hidden mt-1">
+      <div
+        className="flex gap-2 px-2 pb-1.5 mt-1"
+        style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}
+      >
 
-        {/* Left: Calendar grid only (legend removed) */}
-        <div className="flex flex-col flex-[4] min-h-0">
+        {/* Left: Calendar grid */}
+        <div
+          className="flex flex-col min-h-0"
+          style={{ flex: 4 }}
+        >
           <div
             className="flex-1 grid gap-x-1 gap-y-0.5 min-h-0"
             style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
@@ -152,17 +163,39 @@ export const PrintView: React.FC<PrintViewProps> = ({
           </div>
         </div>
 
-        {/* Right: Important Dates */}
+        {/* Right: Important Dates + Color Legend sidebar */}
         <div
-          className="flex flex-col border-l-2 border-black pl-2.5 min-h-0"
-          style={{ width: '22%', flexShrink: 0 }}
+          className="flex flex-col min-h-0"
+          style={{
+            width: '22%',
+            flexShrink: 0,
+            borderLeft: '2px solid black',
+            paddingLeft: '10px',
+            overflow: 'hidden',
+          }}
         >
-          <h3 className="text-[11px] font-bold uppercase border-b-2 border-black mb-1.5 pb-0.5 flex-shrink-0 tracking-wider">
-            Important Dates
-          </h3>
 
-          {/* Entries with month-label grouping */}
-          <div className="flex-1 overflow-hidden">
+          {/* ── IMPORTANT DATES ── */}
+          <div className="flex-shrink-0">
+            <div style={{ borderBottom: '3px solid black', paddingBottom: '3px', marginBottom: '5px' }}>
+              <h3
+                className="font-bold uppercase text-black leading-tight"
+                style={{
+                  fontSize: '10px',
+                  letterSpacing: '0.12em',
+                  fontFamily: SERIF,
+                }}
+              >
+                Important Dates
+              </h3>
+            </div>
+          </div>
+
+          {/* Entries */}
+          <div
+            className="flex-1"
+            style={{ overflow: 'hidden' }}
+          >
             {(() => {
               let prevMonth: string | null = null;
               return importantDates.map(date => {
@@ -174,21 +207,54 @@ export const PrintView: React.FC<PrintViewProps> = ({
                   <React.Fragment key={date.id}>
                     {/* Month section header */}
                     {showMonthHeader && (
-                      <div className="text-[7px] font-bold uppercase tracking-widest text-gray-500 border-b border-gray-400 pt-1.5 pb-px mt-0.5 first:mt-0 leading-tight">
-                        {monthLabel}
+                      <div
+                        className="flex items-center gap-1"
+                        style={{
+                          marginTop: '6px',
+                          marginBottom: '2px',
+                          pageBreakInside: 'avoid',
+                          breakInside: 'avoid',
+                        }}
+                      >
+                        <span
+                          className="font-bold uppercase text-gray-700 whitespace-nowrap flex-shrink-0"
+                          style={{
+                            fontSize: '6px',
+                            letterSpacing: '0.15em',
+                            fontFamily: SERIF,
+                          }}
+                        >
+                          {monthLabel}
+                        </span>
+                        <div style={{ flex: 1, height: '0.5px', backgroundColor: '#9ca3af' }} />
                       </div>
                     )}
 
-                    <div className="mt-0.5">
-                      {/* Description row — no color bullet */}
-                      <div className="leading-tight">
-                        <span className="font-bold uppercase text-[9px] leading-tight">
-                          {date.description}
-                        </span>
-                      </div>
-                      {/* Date range */}
+                    {/* Entry */}
+                    <div
+                      style={{
+                        marginBottom: '4px',
+                        pageBreakInside: 'avoid',
+                        breakInside: 'avoid',
+                      }}
+                    >
                       <div
-                        className="whitespace-pre-wrap leading-snug text-gray-700 text-[8px] mt-px"
+                        className="font-bold uppercase text-black leading-tight"
+                        style={{
+                          fontSize: '7.5px',
+                          letterSpacing: '0.04em',
+                          fontFamily: SERIF,
+                        }}
+                      >
+                        {date.description}
+                      </div>
+                      <div
+                        className="text-gray-800 whitespace-pre-wrap leading-snug"
+                        style={{
+                          fontSize: '7px',
+                          fontFamily: SERIF,
+                          marginTop: '1px',
+                        }}
                       >
                         {date.dateRange}
                       </div>
@@ -199,22 +265,56 @@ export const PrintView: React.FC<PrintViewProps> = ({
             })()}
           </div>
 
-          {/* Manual legend at bottom of Important Dates */}
+          {/* ── COLOR LEGEND ── */}
           {printLegendItems.length > 0 && (
-            <div className="flex-shrink-0 border-t-2 border-black mt-1.5 pt-1">
-              <div className="text-[7px] font-bold uppercase tracking-widest mb-0.5">Legend</div>
-              <div className="flex flex-col gap-0.5">
+            <div
+              className="flex-shrink-0"
+              style={{
+                borderTop: '3px solid black',
+                paddingTop: '5px',
+                marginTop: '5px',
+                pageBreakInside: 'avoid',
+                breakInside: 'avoid',
+              }}
+            >
+              {/* Legend title */}
+              <div style={{ borderBottom: '1px solid black', paddingBottom: '2px', marginBottom: '4px' }}>
+                <h4
+                  className="font-bold uppercase text-black leading-tight"
+                  style={{
+                    fontSize: '9px',
+                    letterSpacing: '0.12em',
+                    fontFamily: SERIF,
+                  }}
+                >
+                  Color Legend
+                </h4>
+              </div>
+
+              {/* Legend items */}
+              <div className="flex flex-col" style={{ gap: '3px' }}>
                 {printLegendItems.map(item => (
-                  <div key={item.id} className="flex items-center gap-1">
+                  <div key={item.id} className="flex items-center" style={{ gap: '5px' }}>
                     <span
                       className="inline-block flex-shrink-0"
                       style={{
-                        width: '8px', height: '8px', minWidth: '8px',
+                        width: '10px',
+                        height: '10px',
+                        minWidth: '10px',
                         backgroundColor: item.color,
-                        border: '0.5px solid rgba(0,0,0,0.25)',
+                        border: '0.75px solid rgba(0,0,0,0.35)',
                       }}
                     />
-                    <span className="text-[7px] uppercase font-medium leading-tight">{item.label}</span>
+                    <span
+                      className="font-medium uppercase text-black leading-tight"
+                      style={{
+                        fontSize: '7.5px',
+                        fontFamily: SERIF,
+                        letterSpacing: '0.04em',
+                      }}
+                    >
+                      {item.label}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -291,7 +391,7 @@ const PrintMonth: React.FC<{
         className="grid grid-cols-7 flex-1"
         style={{ gridTemplateRows: 'auto repeat(6, 1fr)', fontSize: `${dateFontSize}px`, border }}
       >
-        {/* Weekday headers — use accent color like the interactive grid */}
+        {/* Weekday headers */}
         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
           <div
             key={i}
