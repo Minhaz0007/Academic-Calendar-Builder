@@ -5,13 +5,13 @@ import { CalendarTheme } from '../themes';
 // ── Month helpers (mirrors ImportantDates.tsx) ─────────────────────────────────
 const MONTH_ABBR_KEYS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_ABBR_MAP: Record<string, string> = {
-  Jan: 'JANUARY', Feb: 'FEBRUARY', Mar: 'MARCH', Apr: 'APRIL',
-  May: 'MAY', Jun: 'JUNE', Jul: 'JULY', Aug: 'AUGUST',
-  Sep: 'SEPTEMBER', Oct: 'OCTOBER', Nov: 'NOVEMBER', Dec: 'DECEMBER',
+  Jan: 'January', Feb: 'February', Mar: 'March',  Apr: 'April',
+  May: 'May',     Jun: 'June',     Jul: 'July',    Aug: 'August',
+  Sep: 'September', Oct: 'October', Nov: 'November', Dec: 'December',
 };
 const FULL_MONTHS = [
-  'JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE',
-  'JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER',
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
 ];
 
 const SERIF = "'Times New Roman', Times, Georgia, serif";
@@ -23,7 +23,7 @@ function getMonthLabel(date: ImportantDate, startMonth: number, startYear: numbe
   if (date.firstDate) {
     const d = new Date(date.firstDate + 'T00:00:00Z');
     if (!isNaN(d.getTime())) {
-      return `${FULL_MONTHS[d.getUTCMonth()]}, ${d.getUTCFullYear()}`;
+      return `${FULL_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
     }
   }
   // Fix: months >= startMonth belong to startYear; months < startMonth wrap to startYear+1.
@@ -32,7 +32,7 @@ function getMonthLabel(date: ImportantDate, startMonth: number, startYear: numbe
     if (firstLine.startsWith(abbr)) {
       const monthIdx = MONTH_ABBR_KEYS.indexOf(abbr);
       const year = monthIdx >= startMonth ? startYear : startYear + 1;
-      return `${MONTH_ABBR_MAP[abbr]}, ${year}`;
+      return `${MONTH_ABBR_MAP[abbr]} ${year}`;
     }
   }
   return null;
@@ -209,7 +209,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
 
                 return (
                   <React.Fragment key={date.id}>
-                    {/* Month section header — same weight/size as event names, no horizontal line */}
+                    {/* Month header — bold + italic (cursive), title-case, no line */}
                     {showMonthHeader && (
                       <div
                         style={{
@@ -220,11 +220,12 @@ export const PrintView: React.FC<PrintViewProps> = ({
                         }}
                       >
                         <span
-                          className="font-bold uppercase text-black"
                           style={{
-                            fontSize: '7.5px',
-                            letterSpacing: '0.05em',
                             fontFamily: SERIF,
+                            fontSize: '8.5px',
+                            fontWeight: 'bold',
+                            fontStyle: 'italic',
+                            color: '#111827',
                           }}
                         >
                           {monthLabel}
@@ -232,7 +233,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
                       </div>
                     )}
 
-                    {/* Entry: [dateRange]: DESCRIPTION */}
+                    {/* Entry — normal weight, not italic: "dateRange: description" */}
                     <div
                       style={{
                         marginBottom: '3px',
@@ -241,19 +242,13 @@ export const PrintView: React.FC<PrintViewProps> = ({
                         lineHeight: '1.3',
                       }}
                     >
-                      <span
-                        className="text-gray-800"
-                        style={{ fontSize: '7px', fontFamily: SERIF }}
-                      >
+                      <span style={{ fontFamily: SERIF, fontSize: '7px', fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937' }}>
                         {date.dateRange}
                       </span>
                       {date.dateRange && date.description && (
-                        <span className="text-gray-800" style={{ fontSize: '7px', fontFamily: SERIF }}>: </span>
+                        <span style={{ fontFamily: SERIF, fontSize: '7px', color: '#1f2937' }}>: </span>
                       )}
-                      <span
-                        className="font-bold uppercase text-black"
-                        style={{ fontSize: '7.5px', fontFamily: SERIF }}
-                      >
+                      <span style={{ fontFamily: SERIF, fontSize: '7px', fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937' }}>
                         {date.description}
                       </span>
                     </div>

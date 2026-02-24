@@ -14,6 +14,7 @@ interface MonthGridProps {
   pendingRangeStart?: string | null;
   hoveredDate?: string | null;
   previewColor?: string;
+  eraseMode?: boolean;
   theme?: CalendarTheme;
   dateFontSize?: number;
   dateBold?: boolean;
@@ -31,6 +32,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
   pendingRangeStart = null,
   hoveredDate = null,
   previewColor,
+  eraseMode = false,
   theme,
   dateFontSize = 10,
   dateBold = false,
@@ -117,15 +119,21 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
 
           // Range selection states
           const isPendingStart = day.isCurrentMonth && day.date === pendingRangeStart;
-          const inPreview = day.isCurrentMonth && !colorId && isInPreviewRange(day.date);
+          const inRange = day.isCurrentMonth && isInPreviewRange(day.date);
+          // In erase mode: preview shows colored cells fading out
+          const inErasePreview = eraseMode && inRange && !!colorId;
+          // In paint mode: preview shows uncolored cells getting the new color
+          const inPaintPreview = !eraseMode && inRange && !colorId;
 
           let bgColor: string;
           if (!day.isCurrentMonth) {
             bgColor = theme?.nonCurrentBg ?? '#f3f4f6';
+          } else if (inErasePreview) {
+            bgColor = colorId + '40'; // Fade to ~25% — shows cell will be erased
           } else if (colorId) {
             bgColor = colorId;
-          } else if (inPreview && previewColor) {
-            bgColor = previewColor + '55'; // 33% opacity preview
+          } else if (inPaintPreview && previewColor) {
+            bgColor = previewColor + '55'; // 33% opacity paint preview
           } else if (isWeekend) {
             bgColor = theme?.weekendBg ?? '#e0f2fe';
           } else {
@@ -147,7 +155,11 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
               className={`
                 aspect-square flex items-center justify-center transition-colors relative select-none
                 ${day.isCurrentMonth ? 'cursor-pointer hover:opacity-80' : ''}
-                ${isPendingStart ? 'ring-2 ring-inset ring-blue-500 ring-offset-0 z-10' : ''}
+                ${isPendingStart
+                  ? eraseMode
+                    ? 'ring-2 ring-inset ring-orange-500 ring-offset-0 z-10'
+                    : 'ring-2 ring-inset ring-blue-500 ring-offset-0 z-10'
+                  : ''}
               `}
               style={{
                 backgroundColor: bgColor,
@@ -169,7 +181,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
               )}
               {isPendingStart && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600 absolute top-0.5 right-0.5" />
+                  <div className={`w-1.5 h-1.5 rounded-full absolute top-0.5 right-0.5 ${eraseMode ? 'bg-orange-500' : 'bg-blue-600'}`} />
                 </div>
               )}
             </div>
