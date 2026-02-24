@@ -16,29 +16,45 @@ const FULL_MONTHS = [
 
 const SERIF = "'Times New Roman', Times, Georgia, serif";
 
-function getMonthLabel(date: ImportantDate, startMonth: number, startYear: number): string | null {
-  // Custom user-override takes priority
-  if (date.customMonthLabel !== undefined) return date.customMonthLabel;
+/**
+ * Returns an array of month-group labels for all dates in sequence order.
+ * Mirrors the logic in ImportantDates.tsx — see that file for full comments.
+ */
+function computeMonthLabels(
+  dates: ImportantDate[],
+  startMonth: number,
+  startYear: number,
+): (string | null)[] {
+  let seqYear = startYear;
+  let prevMonthIdx = startMonth;
 
-  if (date.firstDate) {
-    const d = new Date(date.firstDate + 'T00:00:00Z');
-    if (!isNaN(d.getTime())) {
-      return `${FULL_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  return dates.map(date => {
+    if (date.customMonthLabel !== undefined) return date.customMonthLabel;
+
+    if (date.firstDate) {
+      const d = new Date(date.firstDate + 'T00:00:00Z');
+      if (!isNaN(d.getTime())) {
+        return `${FULL_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+      }
     }
-  }
-  const firstLine = (date.dateRange || '').split('\n')[0].trim();
-  for (const abbr of MONTH_ABBR_KEYS) {
-    if (firstLine.startsWith(abbr)) {
-      const monthIdx = MONTH_ABBR_KEYS.indexOf(abbr);
-      // Prefer an explicit 4-digit year embedded in the date string (e.g. "Sep 2, 2026")
-      const explicitYear = firstLine.match(/\b(20\d{2})\b/);
-      const year = explicitYear
-        ? parseInt(explicitYear[1], 10)
-        : monthIdx >= startMonth ? startYear : startYear + 1;
-      return `${MONTH_ABBR_MAP[abbr]} ${year}`;
+
+    const firstLine = (date.dateRange || '').split('\n')[0].trim();
+    for (const abbr of MONTH_ABBR_KEYS) {
+      if (firstLine.startsWith(abbr)) {
+        const monthIdx = MONTH_ABBR_KEYS.indexOf(abbr);
+        const explicitYear = firstLine.match(/\b(20\d{2})\b/);
+        if (explicitYear) {
+          return `${MONTH_ABBR_MAP[abbr]} ${parseInt(explicitYear[1], 10)}`;
+        }
+        if (monthIdx < prevMonthIdx) {
+          seqYear++;
+        }
+        prevMonthIdx = monthIdx;
+        return `${MONTH_ABBR_MAP[abbr]} ${seqYear}`;
+      }
     }
-  }
-  return null;
+    return null;
+  });
 }
 
 interface PrintViewProps {
@@ -204,9 +220,10 @@ export const PrintView: React.FC<PrintViewProps> = ({
             style={{ overflow: 'hidden' }}
           >
             {(() => {
+              const monthLabels = computeMonthLabels(importantDates, startMonth, startYear);
               let prevMonth: string | null = null;
-              return importantDates.map(date => {
-                const monthLabel = getMonthLabel(date, startMonth, startYear);
+              return importantDates.map((date, idx) => {
+                const monthLabel = monthLabels[idx];
                 const showMonthHeader = monthLabel !== null && monthLabel !== prevMonth;
                 prevMonth = monthLabel;
 

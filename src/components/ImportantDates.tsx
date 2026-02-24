@@ -15,33 +15,55 @@ const FULL_MONTHS = [
   'July','August','September','October','November','December',
 ];
 
-/** Returns a label like "November 2025" for grouping headers. */
-function getMonthLabel(date: ImportantDate, startMonth: number, startYear: number): string | null {
-  // Custom user-override takes priority
-  if (date.customMonthLabel !== undefined) return date.customMonthLabel;
+/**
+ * Returns an array of month-group labels for all dates in sequence order.
+ * Tracks year transitions by detecting when the month index drops below the
+ * previous one (e.g. Dec → Jan), so a 13-month calendar like Sep 2025 → Sep 2026
+ * correctly labels the second September as "September 2026" instead of "September 2025".
+ */
+function computeMonthLabels(
+  dates: ImportantDate[],
+  startMonth: number,
+  startYear: number,
+): (string | null)[] {
+  let seqYear = startYear;
+  // Initialise to startMonth so the very first entry never falsely triggers a rollover.
+  let prevMonthIdx = startMonth;
 
-  // Auto-entries: use firstDate
-  if (date.firstDate) {
-    const d = new Date(date.firstDate + 'T00:00:00Z');
-    if (!isNaN(d.getTime())) {
-      return `${FULL_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  return dates.map(date => {
+    // Priority 1: custom user override
+    if (date.customMonthLabel !== undefined) return date.customMonthLabel;
+
+    // Priority 2: auto-entries with an explicit firstDate ISO string
+    if (date.firstDate) {
+      const d = new Date(date.firstDate + 'T00:00:00Z');
+      if (!isNaN(d.getTime())) {
+        return `${FULL_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+      }
     }
-  }
-  // Manual entries: parse month abbreviation from first line of dateRange.
-  const firstLine = (date.dateRange || '').split('\n')[0].trim();
-  for (const abbr of MONTH_ABBR_KEYS) {
-    if (firstLine.startsWith(abbr)) {
-      const monthIdx = MONTH_ABBR_KEYS.indexOf(abbr);
-      // If the date string contains an explicit 4-digit year (e.g. "Sep 2, 2026"), use it
-      // directly rather than guessing from startYear — prevents Sep 2026 → 2025 confusion.
-      const explicitYear = firstLine.match(/\b(20\d{2})\b/);
-      const year = explicitYear
-        ? parseInt(explicitYear[1], 10)
-        : monthIdx >= startMonth ? startYear : startYear + 1;
-      return `${MONTH_ABBR_MAP[abbr]} ${year}`;
+
+    // Priority 3: parse the first line of dateRange
+    const firstLine = (date.dateRange || '').split('\n')[0].trim();
+    for (const abbr of MONTH_ABBR_KEYS) {
+      if (firstLine.startsWith(abbr)) {
+        const monthIdx = MONTH_ABBR_KEYS.indexOf(abbr);
+        // Explicit 4-digit year in the string (e.g. "Sep 2, 2026") takes priority.
+        const explicitYear = firstLine.match(/\b(20\d{2})\b/);
+        if (explicitYear) {
+          return `${MONTH_ABBR_MAP[abbr]} ${parseInt(explicitYear[1], 10)}`;
+        }
+        // Sequence-aware year: when the month index drops below the previous one
+        // the calendar year has rolled over (handles both Dec→Jan and the second
+        // occurrence of the start-month in a >12-month calendar).
+        if (monthIdx < prevMonthIdx) {
+          seqYear++;
+        }
+        prevMonthIdx = monthIdx;
+        return `${MONTH_ABBR_MAP[abbr]} ${seqYear}`;
+      }
     }
-  }
-  return null;
+    return null;
+  });
 }
 
 interface ImportantDatesProps {
@@ -82,8 +104,9 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
   /** Edit a month-group label — propagates to ALL entries that share that label. */
   const updateMonthLabel = (currentLabel: string | null, newLabel: string) => {
     if (currentLabel === null) return;
-    setDates(dates.map(d =>
-      getMonthLabel(d, startMonth, startYear) === currentLabel
+    const labels = computeMonthLabels(dates, startMonth, startYear);
+    setDates(dates.map((d, i) =>
+      labels[i] === currentLabel
         ? { ...d, customMonthLabel: newLabel }
         : d
     ));
@@ -106,6 +129,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
   };
 
   // ── Render ───────────────────────────────────────────────────────────────────
+  const monthLabels = computeMonthLabels(dates, startMonth, startYear);
   let prevMonthLabel: string | null = null;
 
   return (
@@ -140,9 +164,9 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
           </p>
         )}
 
-        {dates.map((date) => {
+        {dates.map((date, idx) => {
           const isAuto = !!date.legendItemId;
-          const monthLabel = getMonthLabel(date, startMonth, startYear);
+          const monthLabel = monthLabels[idx];
           const showMonthHeader = monthLabel !== null && monthLabel !== prevMonthLabel;
           const groupLabel = monthLabel;
           prevMonthLabel = monthLabel;
