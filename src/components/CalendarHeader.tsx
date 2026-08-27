@@ -67,13 +67,13 @@ export const CalendarHeader: React.FC<HeaderProps> = ({
               onChange={(e) => setSubtitle(e.target.value)}
               onBlur={() => setEditingSubtitle(false)}
               placeholder="Address · Phone · Website"
-              className="w-full bg-transparent border-none outline-none text-center text-[11px] italic mt-0.5 placeholder-white/50 tracking-wide"
+              className="w-full bg-transparent border-none outline-none text-center text-[16.5px] italic mt-0.5 placeholder-white/50 tracking-wide"
               style={{ color: headerTextColor, opacity: 0.85 }}
             />
           ) : (
             <div
               onClick={() => setEditingSubtitle(true)}
-              className="text-center text-[11px] italic mt-0.5 tracking-wide cursor-text select-none print:text-[9px]"
+              className="text-center text-[16.5px] italic mt-0.5 tracking-wide cursor-text select-none print:text-[13.5px]"
               style={{ color: headerTextColor, opacity: 0.85 }}
             >
               {subtitle.split('|').map((part, i) => (

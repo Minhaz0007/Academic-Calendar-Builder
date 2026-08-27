@@ -147,7 +147,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
             {institutionName}
           </div>
           <div
-            className="text-[8px] italic mt-0.5 opacity-85 tracking-wide"
+            className="text-[12px] italic mt-0.5 opacity-85 tracking-wide"
             style={{ color: headerTextColor }}
           >
             {subtitle.split('|').map((part, i) => (
