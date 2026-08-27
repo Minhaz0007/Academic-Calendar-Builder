@@ -20,7 +20,7 @@ const DEFAULT_SETTINGS: CalendarSettings = {
   theme: 'classic',
   dateFontSize: 14,
   dateBold: false,
-  eventsFontSize: 9,
+  eventsFontSize: 14,
 };
 
 const STORAGE_KEY = 'academicCalendarState_v2';
@@ -118,7 +118,7 @@ function App() {
 
   // UI / interaction state
   const [selectedColorId, setSelectedColorId] = useState<string | null>(DEFAULT_LEGEND[0].id);
-  const [showSettings, setShowSettings] = useState(false);
+  const [showSettings, setShowSettings] = useState(true);
   const [eraseMode, setEraseMode] = useState(false);
 
   // Click-click range selection
@@ -776,19 +776,25 @@ function App() {
 
                 <div className="w-px h-5 bg-gray-300" />
 
-                {/* Events font size */}
+                {/* Events font size — 3 fixed notches; entries auto-wrap so nothing clips at larger sizes */}
                 <div className="flex items-center gap-2">
                   <label className="font-medium text-gray-600 whitespace-nowrap">Events Size:</label>
                   <input
                     type="range"
-                    min={6}
-                    max={14}
-                    step={1}
-                    value={settings.eventsFontSize ?? 9}
+                    min={14}
+                    max={18}
+                    step={2}
+                    list="events-size-ticks"
+                    value={settings.eventsFontSize ?? 14}
                     onChange={(e) => setSettings(s => ({ ...s, eventsFontSize: parseInt(e.target.value) }))}
                     className="w-24 accent-blue-600"
                   />
-                  <span className="text-xs text-gray-500 w-6">{settings.eventsFontSize ?? 9}px</span>
+                  <datalist id="events-size-ticks">
+                    <option value="14" />
+                    <option value="16" />
+                    <option value="18" />
+                  </datalist>
+                  <span className="text-xs text-gray-500 w-6">{settings.eventsFontSize ?? 14}px</span>
                 </div>
 
                 <span className="text-xs text-gray-400 ml-auto italic">Use the Save button to persist changes to the cloud</span>
@@ -872,7 +878,7 @@ function App() {
                 setPrintLegendItems={setPrintLegendItems}
                 startYear={startYear}
                 startMonth={settings.startMonth}
-                fontSize={settings.eventsFontSize ?? 9}
+                fontSize={settings.eventsFontSize ?? 14}
               />
             </div>
           </div>
@@ -897,7 +903,7 @@ function App() {
         dateBold={settings.dateBold ?? false}
         headerTextColor={activeTheme.headerTextColor}
         theme={activeTheme}
-        eventsFontSize={settings.eventsFontSize ?? 9}
+        eventsFontSize={settings.eventsFontSize ?? 14}
       />
 
       <style>{`
