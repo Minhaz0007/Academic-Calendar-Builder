@@ -94,8 +94,10 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
   const legendTitle = Math.round(fs * 1.35);  // "Color Legend" title
   const legendLabel = Math.round(fs * 1.1);   // legend item labels
   const squareSize  = Math.round(fs * 2);     // legend color square (px)
-  const entryMb     = Math.max(1, Math.round(fs * 0.2));   // margin-bottom per entry
-  const headerMt    = Math.round(fs * 0.55);  // margin-top for month headers
+  // Spacing tightens as font size grows so larger event text still fits the panel
+  // instead of pushing listings past the layout — bigger font, smaller gaps.
+  const entryMb     = Math.max(1, Math.round(3 - (fs - 6) * 0.25));   // margin-bottom per entry
+  const headerMt    = Math.max(2, Math.round(6 - (fs - 6) * 0.375));  // margin-top for month headers
 
   const addDate = () => {
     setDates([...dates, {
