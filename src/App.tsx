@@ -15,9 +15,9 @@ const MONTH_FULL = ['January','February','March','April','May','June','July','Au
 const DEFAULT_SETTINGS: CalendarSettings = {
   startMonth: 8, // September
   numMonths: 12,
-  accentColor: '#a5f3fc',
+  accentColor: '#18181b',
   highlightWeekends: false,
-  theme: 'classic',
+  theme: 'minimalist',
   dateFontSize: 14,
   dateBold: false,
   eventsFontSize: 14,
@@ -440,14 +440,14 @@ function App() {
   const canRedo = historyIndex < colorHistory.length - 1;
 
   // Active theme
-  const activeTheme = getTheme(settings.theme ?? 'classic');
+  const activeTheme = getTheme(settings.theme ?? 'minimalist');
 
   // Effective accent: if user has manually overridden via the color picker, use that;
   // otherwise fall back to the theme's accent color.
-  // We track a manual override: if settings.accentColor differs from the classic default,
+  // We track a manual override: if settings.accentColor differs from the default sentinel,
   // the user has chosen it explicitly. Here we just always let the theme accent apply
   // unless the user changed it after picking the theme (settings.accentColor takes priority
-  // only for the 'classic' theme behaviour – we honour it as an override across all themes).
+  // as an override across all themes).
   const effectiveAccent = settings.accentColor !== DEFAULT_SETTINGS.accentColor
     ? settings.accentColor
     : activeTheme.accentColor;
