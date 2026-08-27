@@ -80,8 +80,8 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
       style={{ fontFamily: theme?.fontFamily ?? "ui-serif, Georgia, serif" }}
     >
       <h4
-        className="font-bold text-center mb-1 uppercase tracking-wider text-sm"
-        style={{ color: theme?.monthTitleColor ?? '#111827' }}
+        className="font-bold text-center mb-1 uppercase tracking-wider"
+        style={{ color: theme?.monthTitleColor ?? '#111827', fontSize: `${dateFontSize + 1}px` }}
       >
         {monthName} '{shortYear}
       </h4>

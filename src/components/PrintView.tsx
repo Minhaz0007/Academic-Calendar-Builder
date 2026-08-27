@@ -1,6 +1,7 @@
 import React from 'react';
 import { CalendarDay, LegendItem, ImportantDate, PrintLegendItem } from '../types';
 import { CalendarTheme } from '../themes';
+import { getImportantDatesSizes } from '../lib/importantDatesSizes';
 
 // ── Month helpers (mirrors ImportantDates.tsx) ─────────────────────────────────
 const MONTH_ABBR_KEYS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -96,15 +97,20 @@ export const PrintView: React.FC<PrintViewProps> = ({
   theme,
   eventsFontSize = 9,
 }) => {
-  // Derived sizes for the sidebar — same formulas as ImportantDates.tsx
+  // Derived sizes for the sidebar — shared with ImportantDates.tsx so the
+  // editor and the printed output are pixel-identical.
   const fs = eventsFontSize;
-  const evTitleSize   = Math.round(fs * 1.65);
-  const evMonthSize   = Math.round(fs * 1.2);
-  const evLegendTitle = Math.round(fs * 1.35);
-  const evLegendLabel = fs;
-  const evSquareSize  = fs;
-  const evEntryMb     = Math.max(1, Math.round(fs * 0.2));
-  const evHeaderMt    = Math.round(fs * 0.55);
+  const {
+    titleSize: evTitleSize,
+    monthSize: evMonthSize,
+    legendTitle: evLegendTitle,
+    legendLabel: evLegendLabel,
+    squareSize: evSquareSize,
+    entryMb: evEntryMb,
+    headerMt: evHeaderMt,
+    legendGap: evLegendGap,
+    legendTopMargin: evLegendTopMargin,
+  } = getImportantDatesSizes(fs);
   const cols = months.length <= 6 ? 3 : months.length <= 9 ? 3 : 4;
 
   return (
@@ -257,25 +263,28 @@ export const PrintView: React.FC<PrintViewProps> = ({
                       </div>
                     )}
 
-                    {/* Entry row */}
+                    {/* Entry row — same 38%/flex column split as the editor, so wrapping breaks identically */}
                     <div
                       style={{
                         marginBottom: `${evEntryMb}px`,
                         pageBreakInside: 'avoid',
                         breakInside: 'avoid',
-                        lineHeight: '1.2',
+                        lineHeight: '1.25',
                         backgroundColor: date.highlight ?? 'transparent',
                         borderRadius: date.highlight ? '2px' : '0',
                         padding: date.highlight ? '0 2px' : '0',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '4px',
                       }}
                     >
-                      <span style={{ fontFamily: SERIF, fontSize: `${fs}px`, fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937' }}>
+                      <span style={{ fontFamily: SERIF, fontSize: `${fs}px`, fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937', width: '38%', flexShrink: 0, wordBreak: 'break-word' }}>
                         {date.dateRange}
                       </span>
                       {date.dateRange && date.description && (
-                        <span style={{ fontFamily: SERIF, fontSize: `${fs}px`, color: '#1f2937' }}>: </span>
+                        <span style={{ fontFamily: SERIF, fontSize: `${fs}px`, color: '#1f2937', flexShrink: 0 }}>:</span>
                       )}
-                      <span style={{ fontFamily: SERIF, fontSize: `${fs}px`, fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937' }}>
+                      <span style={{ fontFamily: SERIF, fontSize: `${fs}px`, fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937', flex: 1, minWidth: 0, wordBreak: 'break-word' }}>
                         {date.description}
                       </span>
                     </div>
@@ -292,7 +301,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
               style={{
                 borderTop: '2.5px solid black',
                 paddingTop: '3px',
-                marginTop: `${Math.round(fs * 0.5)}px`,
+                marginTop: `${evLegendTopMargin}px`,
                 pageBreakInside: 'avoid',
                 breakInside: 'avoid',
               }}
@@ -306,7 +315,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
                 </h4>
               </div>
 
-              <div className="flex flex-col" style={{ gap: `${Math.max(2, Math.round(fs * 0.25))}px` }}>
+              <div className="flex flex-col" style={{ gap: `${evLegendGap}px` }}>
                 {printLegendItems.map(item => (
                   <div key={item.id} className="flex items-center" style={{ gap: '4px' }}>
                     <span

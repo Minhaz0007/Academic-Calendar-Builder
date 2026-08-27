@@ -1,6 +1,16 @@
 import React from 'react';
 import { Plus, Trash2, Highlighter } from 'lucide-react';
 import { ImportantDate, PrintLegendItem } from '../types';
+import { getImportantDatesSizes } from '../lib/importantDatesSizes';
+
+// Grows a <textarea> to fit its content and wraps text instead of clipping it —
+// mirrors how PrintView's plain text spans wrap, so the editor never hides text
+// that the printed output shows fine.
+function autosizeTextarea(el: HTMLTextAreaElement | null) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+}
 
 // ── Month helpers ──────────────────────────────────────────────────────────────
 // Title-case, no comma — e.g.  "November 2025"
@@ -87,17 +97,12 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
   startMonth,
   fontSize = 9,
 }) => {
-  // ── Derived sizes (all relative to `fontSize`) ───────────────────────────
+  // ── Derived sizes (all relative to `fontSize`, shared with PrintView) ────
   const fs = fontSize;
-  const titleSize   = Math.round(fs * 1.65);  // section title "Important Dates"
-  const monthSize   = Math.round(fs * 1.2);   // month-group header
-  const legendTitle = Math.round(fs * 1.35);  // "Color Legend" title
-  const legendLabel = Math.round(fs * 1.1);   // legend item labels
-  const squareSize  = Math.round(fs * 2);     // legend color square (px)
-  // Spacing tightens as font size grows so larger event text still fits the panel
-  // instead of pushing listings past the layout — bigger font, smaller gaps.
-  const entryMb     = Math.max(1, Math.round(3 - (fs - 6) * 0.25));   // margin-bottom per entry
-  const headerMt    = Math.max(2, Math.round(6 - (fs - 6) * 0.375));  // margin-top for month headers
+  const {
+    titleSize, monthSize, legendTitle, legendLabel, squareSize,
+    entryMb, headerMt, legendGap, legendTopMargin,
+  } = getImportantDatesSizes(fs);
 
   const addDate = () => {
     setDates([...dates, {
@@ -227,41 +232,51 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
                   padding: date.highlight ? '0 2px' : '0',
                 }}
               >
-                <div className="flex items-baseline gap-1">
-                  {/* Date range */}
-                  <input
-                    type="text"
+                <div className="flex items-start gap-1">
+                  {/* Date range — auto-grows and wraps instead of clipping, matching PrintView's flowing text */}
+                  <textarea
+                    ref={(el) => autosizeTextarea(el)}
+                    rows={1}
                     value={date.dateRange}
                     onChange={(e) => updateDate(date.id, {
                       dateRange: e.target.value,
                       ...(isAuto ? { isDateRangeCustomized: true } : {}),
                     })}
-                    className="text-gray-800 bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none"
+                    onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+                    className="text-gray-800 bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none resize-none overflow-hidden"
                     style={{
                       fontFamily: SERIF,
                       fontSize: `${fs}px`,
                       fontWeight: 'normal',
                       fontStyle: 'normal',
+                      lineHeight: 1.25,
                       width: '38%',
                       flexShrink: 0,
+                      padding: 0,
+                      margin: 0,
                     }}
                     placeholder="Dates"
                   />
-                  <span style={{ fontSize: `${fs}px`, color: '#374151', flexShrink: 0 }}>:</span>
-                  {/* Description */}
-                  <input
-                    type="text"
+                  <span style={{ fontSize: `${fs}px`, color: '#374151', flexShrink: 0, lineHeight: 1.25 }}>:</span>
+                  {/* Description — same auto-grow/wrap treatment */}
+                  <textarea
+                    ref={(el) => autosizeTextarea(el)}
+                    rows={1}
                     value={date.description}
                     onChange={(e) => updateDate(date.id, {
                       description: e.target.value,
                       ...(isAuto ? { isDescriptionCustomized: true } : {}),
                     })}
-                    className="text-gray-800 bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none flex-1 min-w-0"
+                    onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+                    className="text-gray-800 bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none flex-1 min-w-0 resize-none overflow-hidden"
                     style={{
                       fontFamily: SERIF,
                       fontSize: `${fs}px`,
                       fontWeight: 'normal',
                       fontStyle: 'normal',
+                      lineHeight: 1.25,
+                      padding: 0,
+                      margin: 0,
                     }}
                     placeholder="Event name"
                   />
@@ -327,7 +342,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
       <div
         className="flex-shrink-0 pt-2"
         style={{
-          marginTop: `${Math.round(fs * 0.4)}px`,
+          marginTop: `${legendTopMargin}px`,
           borderTop: '3px solid black',
           pageBreakInside: 'avoid',
           breakInside: 'avoid',
@@ -351,7 +366,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
           </button>
         </div>
 
-        <div className="flex flex-col" style={{ gap: `${Math.max(2, Math.round(fs * 0.3))}px` }}>
+        <div className="flex flex-col" style={{ gap: `${legendGap}px` }}>
           {printLegendItems.map(item => (
             <div key={item.id} className="group flex items-center gap-2">
               {/* Color swatch (edit mode) */}
