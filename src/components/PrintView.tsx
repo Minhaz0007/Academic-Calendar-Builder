@@ -95,7 +95,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
   dateBold = false,
   headerTextColor = '#000000',
   theme,
-  eventsFontSize = 9,
+  eventsFontSize = 14,
 }) => {
   // Derived sizes for the sidebar — shared with ImportantDates.tsx so the
   // editor and the printed output are pixel-identical.

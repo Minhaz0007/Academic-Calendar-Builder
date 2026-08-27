@@ -83,7 +83,7 @@ interface ImportantDatesProps {
   setPrintLegendItems: (items: PrintLegendItem[]) => void;
   startYear: number;
   startMonth: number;
-  fontSize?: number; // base font size for the entire section (default 9)
+  fontSize?: number; // base font size for the entire section (default 14)
 }
 
 const SERIF = "'Times New Roman', Times, Georgia, serif";
@@ -95,7 +95,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
   setPrintLegendItems,
   startYear,
   startMonth,
-  fontSize = 9,
+  fontSize = 14,
 }) => {
   // ── Derived sizes (all relative to `fontSize`, shared with PrintView) ────
   const fs = fontSize;
