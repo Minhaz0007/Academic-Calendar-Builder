@@ -17,7 +17,9 @@ export interface ImportantDatesSizes {
 export function getImportantDatesSizes(fontSize: number): ImportantDatesSizes {
   const fs = fontSize;
   return {
-    titleSize: Math.round(fs * 1.65),
+    // Same size as the event text itself (just rendered bold) so the header
+    // doesn't eat into the vertical space available for event listings.
+    titleSize: fs,
     monthSize: Math.round(fs * 1.2),
     legendTitle: Math.round(fs * 1.35),
     legendLabel: Math.round(fs * 1.1),
