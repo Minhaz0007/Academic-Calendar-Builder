@@ -10,7 +10,11 @@ import { THEMES, getTheme } from './themes';
 import { Printer, Undo2, Redo2, Eraser, Download, Upload, Settings, ChevronDown, CloudUpload, Check, AlertCircle } from 'lucide-react';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+// School years selectable from the "School Year" dropdown: the next 100 years
+// starting at 2026-27, labeled e.g. "2026-27" (startYear stores just 2026).
+const SCHOOL_YEAR_START = 2026;
+const SCHOOL_YEAR_OPTIONS = Array.from({ length: 100 }, (_, i) => SCHOOL_YEAR_START + i);
 
 const DEFAULT_SETTINGS: CalendarSettings = {
   startMonth: 8, // September
@@ -66,11 +70,6 @@ function computeDateRangesText(dayColors: Record<string, string>, legendItemId: 
   return ranges.join('\n');
 }
 
-/** Returns the last day of a given month/year as a Date (UTC). */
-function lastDayOfMonth(year: number, month: number): Date {
-  return new Date(Date.UTC(year, month + 1, 0));
-}
-
 /**
  * Inserts ' | ' separators into legacy subtitle strings that used plain spaces
  * between the address, telephone, and website segments.
@@ -106,7 +105,7 @@ function migrateDayColors(
 
 function App() {
   // Core state
-  const [startYear, setStartYear] = useState(2025);
+  const [startYear, setStartYear] = useState(2026);
   const [institutionName, setInstitutionName] = useState('MADINATUL ULOOM');
   const [subtitle, setSubtitle] = useState('995 Fillmore Avenue, Buffalo, NY 14211  |  Tel: (716) 292-5956  |  www.madinatululoom.org');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -124,20 +123,6 @@ function App() {
   // Click-click range selection
   const [pendingRangeStart, setPendingRangeStart] = useState<string | null>(null);
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
-
-  // Date range mode: 'date' = individual date pickers, 'month' = whole-month selectors
-  const [rangeMode, setRangeMode] = useState<'date' | 'month'>('date');
-
-  // Date range state
-  const [rangeStart, setRangeStart] = useState('');
-  const [rangeEnd, setRangeEnd] = useState('');
-
-  // Month range state (year + month selects)
-  const currentYear = new Date().getFullYear();
-  const [mrStartYear, setMrStartYear] = useState(startYear);
-  const [mrStartMonth, setMrStartMonth] = useState(settings.startMonth);
-  const [mrEndYear, setMrEndYear] = useState(startYear);
-  const [mrEndMonth, setMrEndMonth] = useState(settings.startMonth);
 
   // Undo / Redo stack
   const [colorHistory, setColorHistory] = useState<Record<string, string>[]>([{}]);
@@ -325,49 +310,6 @@ function App() {
     return result;
   };
 
-  // If the earliest date being colored falls outside the calendar's currently
-  // displayed months, jump the calendar's start year so it's visible —
-  // otherwise applying a range for a year not on screen silently colors days
-  // the user can't see, which looks like the button did nothing.
-  const ensureRangeVisible = (fromISO: string, toISO: string) => {
-    const a = new Date(fromISO + 'T00:00:00Z');
-    const b = new Date(toISO + 'T00:00:00Z');
-    if (isNaN(a.getTime()) || isNaN(b.getTime())) return;
-    const earliest = a <= b ? a : b;
-    const anchorYear = earliest.getUTCFullYear();
-    const anchorMonthIdx = earliest.getUTCMonth();
-
-    const startAbs = startYear * 12 + settings.startMonth;
-    const endAbs = startAbs + settings.numMonths - 1;
-    const anchorAbs = anchorYear * 12 + anchorMonthIdx;
-    if (anchorAbs >= startAbs && anchorAbs <= endAbs) return; // already visible
-
-    setStartYear(anchorMonthIdx >= settings.startMonth ? anchorYear : anchorYear - 1);
-  };
-
-  // ── Range handlers ─────────────────────────────────────────────────────────
-  const handleDateRangeApply = () => {
-    if (!rangeStart || !rangeEnd || !selectedColorId) return;
-    const item = legendItems.find(i => i.id === selectedColorId);
-    if (!item) return;
-    pushToHistory(fillRange(dayColors, rangeStart, rangeEnd, item.id));
-    ensureRangeVisible(rangeStart, rangeEnd);
-  };
-
-  const handleMonthRangeApply = () => {
-    if (!selectedColorId) return;
-    const item = legendItems.find(i => i.id === selectedColorId);
-    if (!item) return;
-
-    // Build full date strings: 1st of start month → last day of end month
-    const fromISO = `${mrStartYear}-${String(mrStartMonth + 1).padStart(2, '0')}-01`;
-    const lastDay = lastDayOfMonth(mrEndYear, mrEndMonth);
-    const toISO = lastDay.toISOString().split('T')[0];
-
-    pushToHistory(fillRange(dayColors, fromISO, toISO, item.id));
-    ensureRangeVisible(fromISO, toISO);
-  };
-
   // ── Click-click range selection ────────────────────────────────────────────
   const handleDayClick = (date: string) => {
     // ── Erase mode: remove color from clicked / range of cells ──
@@ -493,9 +435,6 @@ function App() {
     return { year: d.getFullYear(), month: d.getMonth() };
   });
 
-  // Year options for month-range picker
-  const yearOptions = [startYear - 1, startYear, startYear + 1, startYear + 2];
-
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < colorHistory.length - 1;
 
@@ -531,101 +470,6 @@ function App() {
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
 
               <h1 className="text-lg font-bold text-gray-700 shrink-0">Academic Calendar Builder</h1>
-
-              {/* ── Range Picker ──────────────────────────────────────────── */}
-              <div className="flex flex-col gap-1 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
-                {/* Mode Toggle */}
-                <div className="flex items-center gap-1 text-xs mb-1">
-                  <button
-                    onClick={() => setRangeMode('date')}
-                    className={`px-2.5 py-0.5 rounded font-medium transition-colors ${
-                      rangeMode === 'date'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-500 hover:bg-gray-200'
-                    }`}
-                  >
-                    Date Range
-                  </button>
-                  <button
-                    onClick={() => setRangeMode('month')}
-                    className={`px-2.5 py-0.5 rounded font-medium transition-colors ${
-                      rangeMode === 'month'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-500 hover:bg-gray-200'
-                    }`}
-                  >
-                    Month Range
-                  </button>
-                </div>
-
-                {rangeMode === 'date' ? (
-                  /* Individual Date Pickers */
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <input
-                      type="date"
-                      value={rangeStart}
-                      onChange={(e) => setRangeStart(e.target.value)}
-                      className="border border-gray-300 rounded px-2 py-1 text-sm"
-                    />
-                    <span className="text-gray-400 text-sm">→</span>
-                    <input
-                      type="date"
-                      value={rangeEnd}
-                      onChange={(e) => setRangeEnd(e.target.value)}
-                      className="border border-gray-300 rounded px-2 py-1 text-sm"
-                    />
-                    <button
-                      onClick={handleDateRangeApply}
-                      disabled={!rangeStart || !rangeEnd || !selectedColorId}
-                      className="bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                ) : (
-                  /* Month + Year Selectors */
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {/* Start */}
-                    <select
-                      value={mrStartMonth}
-                      onChange={(e) => setMrStartMonth(parseInt(e.target.value))}
-                      className="border border-gray-300 rounded px-1.5 py-1 text-sm bg-white"
-                    >
-                      {MONTH_FULL.map((m, i) => <option key={i} value={i}>{m}</option>)}
-                    </select>
-                    <select
-                      value={mrStartYear}
-                      onChange={(e) => setMrStartYear(parseInt(e.target.value))}
-                      className="border border-gray-300 rounded px-1.5 py-1 text-sm bg-white"
-                    >
-                      {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                    <span className="text-gray-400 text-sm">→</span>
-                    {/* End */}
-                    <select
-                      value={mrEndMonth}
-                      onChange={(e) => setMrEndMonth(parseInt(e.target.value))}
-                      className="border border-gray-300 rounded px-1.5 py-1 text-sm bg-white"
-                    >
-                      {MONTH_FULL.map((m, i) => <option key={i} value={i}>{m}</option>)}
-                    </select>
-                    <select
-                      value={mrEndYear}
-                      onChange={(e) => setMrEndYear(parseInt(e.target.value))}
-                      className="border border-gray-300 rounded px-1.5 py-1 text-sm bg-white"
-                    >
-                      {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                    <button
-                      onClick={handleMonthRangeApply}
-                      disabled={!selectedColorId}
-                      className="bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                )}
-              </div>
 
               {/* ── Action Buttons ────────────────────────────────────────── */}
               <div className="flex items-center gap-1.5 flex-wrap justify-center">
@@ -756,6 +600,20 @@ function App() {
                 </div>
 
                 <div className="w-px h-5 bg-gray-300" />
+
+                {/* School Year */}
+                <div className="flex items-center gap-2">
+                  <label className="font-medium text-gray-600 whitespace-nowrap">School Year:</label>
+                  <select
+                    value={startYear}
+                    onChange={(e) => setStartYear(parseInt(e.target.value))}
+                    className="border border-gray-300 rounded px-2 py-1 text-sm bg-white"
+                  >
+                    {SCHOOL_YEAR_OPTIONS.map(y => (
+                      <option key={y} value={y}>{y}-{String(y + 1).slice(-2)}</option>
+                    ))}
+                  </select>
+                </div>
 
                 {/* Start Month */}
                 <div className="flex items-center gap-2">
