@@ -144,8 +144,50 @@ function App() {
   const [historyIndex, setHistoryIndex] = useState(0);
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  // True once a cloud read/write has failed (e.g. the Supabase project is
+  // unreachable) — changes still save to this browser via localStorage so
+  // work isn't lost, but won't sync anywhere else until the cloud recovers.
+  const [cloudOffline, setCloudOffline] = useState(false);
 
   const importRef = useRef<HTMLInputElement>(null);
+
+  // Row shape shared between the Supabase table and the local safety-net copy,
+  // so one function can restore state from either source.
+  const buildRow = () => ({
+    session_key:      getSessionKey(),
+    institution_name: institutionName,
+    subtitle,
+    logo_url:         logoUrl,
+    start_year:       startYear,
+    settings:         { ...settings, printLegendItems },
+    day_colors:       dayColors,
+    legend_items:     legendItems,
+    important_dates:  importantDates,
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const applyRow = (data: any) => {
+    if (typeof data.start_year === 'number') setStartYear(data.start_year);
+    if (typeof data.institution_name === 'string') setInstitutionName(data.institution_name);
+    if (typeof data.subtitle === 'string') setSubtitle(migrateSubtitle(data.subtitle));
+    if (typeof data.logo_url === 'string') setLogoUrl(data.logo_url);
+    const loadedItems: LegendItem[] = Array.isArray(data.legend_items)
+      ? data.legend_items
+      : DEFAULT_LEGEND;
+    if (Array.isArray(data.legend_items)) setLegendItems(loadedItems);
+    if (data.day_colors && typeof data.day_colors === 'object') {
+      const migrated = migrateDayColors(data.day_colors, loadedItems);
+      setDayColors(migrated);
+      setColorHistory([migrated]);
+    }
+    if (Array.isArray(data.important_dates)) setImportantDates(data.important_dates);
+    if (data.settings && typeof data.settings === 'object') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { printLegendItems: savedPrintLegend, ...calSettings } = data.settings as any;
+      setSettings(prev => ({ ...DEFAULT_SETTINGS, ...calSettings }));
+      if (Array.isArray(savedPrintLegend)) setPrintLegendItems(savedPrintLegend);
+    }
+  };
 
   // Clear pending range when selected color changes; also exit erase mode
   useEffect(() => {
@@ -163,54 +205,52 @@ function App() {
   }, []);
 
 
-  // ── Persist & restore (Supabase) ───────────────────────────────────────────
+  // ── Persist & restore (Supabase, with a localStorage safety net) ───────────
+  // Restore whatever this browser saved locally first, so work survives even
+  // when the cloud is unreachable; then let Supabase (the shared record) take
+  // over if it responds.
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) applyRow(JSON.parse(raw));
+    } catch {
+      // Corrupted or inaccessible local copy — ignore and rely on Supabase/defaults.
+    }
+
     const load = async () => {
-      const { data } = await supabase
-        .from('calendars')
-        .select('*')
-        .eq('session_key', getSessionKey())
-        .maybeSingle();
-      if (data) {
-        if (typeof data.start_year === 'number') setStartYear(data.start_year);
-        if (typeof data.institution_name === 'string') setInstitutionName(data.institution_name);
-        if (typeof data.subtitle === 'string') setSubtitle(migrateSubtitle(data.subtitle));
-        if (typeof data.logo_url === 'string') setLogoUrl(data.logo_url);
-        const loadedItems: LegendItem[] = Array.isArray(data.legend_items)
-          ? data.legend_items
-          : DEFAULT_LEGEND;
-        if (Array.isArray(data.legend_items)) setLegendItems(loadedItems);
-        if (data.day_colors && typeof data.day_colors === 'object') {
-          const migrated = migrateDayColors(data.day_colors, loadedItems);
-          setDayColors(migrated);
-          setColorHistory([migrated]);
-        }
-        if (Array.isArray(data.important_dates)) setImportantDates(data.important_dates);
-        if (data.settings && typeof data.settings === 'object') {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { printLegendItems: savedPrintLegend, ...calSettings } = data.settings as any;
-          setSettings(prev => ({ ...DEFAULT_SETTINGS, ...calSettings }));
-          if (Array.isArray(savedPrintLegend)) setPrintLegendItems(savedPrintLegend);
-        }
+      try {
+        const { data, error } = await supabase
+          .from('calendars')
+          .select('*')
+          .eq('session_key', getSessionKey())
+          .maybeSingle();
+        if (error) throw error;
+        if (data) applyRow(data);
+        setCloudOffline(false);
+      } catch {
+        setCloudOffline(true);
       }
     };
     load();
   }, []);
 
-  // Debounced auto-save — waits 1 s after last change before writing to Supabase
+  // Debounced auto-save — waits 1 s after last change, always writes a local
+  // safety-net copy, then tries to sync it to Supabase.
   useEffect(() => {
     const timer = setTimeout(async () => {
-      await supabase.from('calendars').upsert({
-        session_key:      getSessionKey(),
-        institution_name: institutionName,
-        subtitle,
-        logo_url:         logoUrl,
-        start_year:       startYear,
-        settings:         { ...settings, printLegendItems },
-        day_colors:       dayColors,
-        legend_items:     legendItems,
-        important_dates:  importantDates,
-      }, { onConflict: 'session_key' });
+      const row = buildRow();
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(row));
+      } catch {
+        // Storage full/unavailable (e.g. private browsing) — nothing more we can do locally.
+      }
+      try {
+        const { error } = await supabase.from('calendars').upsert(row, { onConflict: 'session_key' });
+        if (error) throw error;
+        setCloudOffline(false);
+      } catch {
+        setCloudOffline(true);
+      }
     }, 1000);
     return () => clearTimeout(timer);
   }, [startYear, institutionName, subtitle, logoUrl, dayColors, legendItems, importantDates, settings, printLegendItems]);
@@ -285,12 +325,33 @@ function App() {
     return result;
   };
 
+  // If the earliest date being colored falls outside the calendar's currently
+  // displayed months, jump the calendar's start year so it's visible —
+  // otherwise applying a range for a year not on screen silently colors days
+  // the user can't see, which looks like the button did nothing.
+  const ensureRangeVisible = (fromISO: string, toISO: string) => {
+    const a = new Date(fromISO + 'T00:00:00Z');
+    const b = new Date(toISO + 'T00:00:00Z');
+    if (isNaN(a.getTime()) || isNaN(b.getTime())) return;
+    const earliest = a <= b ? a : b;
+    const anchorYear = earliest.getUTCFullYear();
+    const anchorMonthIdx = earliest.getUTCMonth();
+
+    const startAbs = startYear * 12 + settings.startMonth;
+    const endAbs = startAbs + settings.numMonths - 1;
+    const anchorAbs = anchorYear * 12 + anchorMonthIdx;
+    if (anchorAbs >= startAbs && anchorAbs <= endAbs) return; // already visible
+
+    setStartYear(anchorMonthIdx >= settings.startMonth ? anchorYear : anchorYear - 1);
+  };
+
   // ── Range handlers ─────────────────────────────────────────────────────────
   const handleDateRangeApply = () => {
     if (!rangeStart || !rangeEnd || !selectedColorId) return;
     const item = legendItems.find(i => i.id === selectedColorId);
     if (!item) return;
     pushToHistory(fillRange(dayColors, rangeStart, rangeEnd, item.id));
+    ensureRangeVisible(rangeStart, rangeEnd);
   };
 
   const handleMonthRangeApply = () => {
@@ -304,6 +365,7 @@ function App() {
     const toISO = lastDay.toISOString().split('T')[0];
 
     pushToHistory(fillRange(dayColors, fromISO, toISO, item.id));
+    ensureRangeVisible(fromISO, toISO);
   };
 
   // ── Click-click range selection ────────────────────────────────────────────
@@ -406,22 +468,20 @@ function App() {
   // ── Manual Save ────────────────────────────────────────────────────────────
   const handleSave = async () => {
     setSaveStatus('saving');
+    const row = buildRow();
     try {
-      const { error } = await supabase.from('calendars').upsert({
-        session_key:      getSessionKey(),
-        institution_name: institutionName,
-        subtitle,
-        logo_url:         logoUrl,
-        start_year:       startYear,
-        settings:         { ...settings, printLegendItems },
-        day_colors:       dayColors,
-        legend_items:     legendItems,
-        important_dates:  importantDates,
-      }, { onConflict: 'session_key' });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(row));
+    } catch {
+      // Storage full/unavailable — nothing more we can do locally.
+    }
+    try {
+      const { error } = await supabase.from('calendars').upsert(row, { onConflict: 'session_key' });
       if (error) throw error;
+      setCloudOffline(false);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2500);
     } catch {
+      setCloudOffline(true);
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 3000);
     }
@@ -620,7 +680,7 @@ function App() {
                 <button
                   onClick={handleSave}
                   disabled={saveStatus === 'saving'}
-                  title="Save to cloud"
+                  title={cloudOffline ? 'Cloud unreachable — changes are saved on this device only' : 'Save to cloud'}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all disabled:cursor-not-allowed ${
                     saveStatus === 'saved'
                       ? 'bg-green-600 text-white hover:bg-green-700'
@@ -641,6 +701,14 @@ function App() {
                     <><CloudUpload size={16} /> Save</>
                   )}
                 </button>
+                {cloudOffline && (
+                  <span
+                    className="flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-300 rounded-lg px-2 py-1"
+                    title="The cloud database can't be reached. Your changes are being saved locally in this browser so nothing is lost, but they won't sync anywhere else until the connection recovers."
+                  >
+                    <AlertCircle size={13} /> Saved locally only — cloud unreachable
+                  </span>
+                )}
 
                 <button onClick={() => window.print()}
                   className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition-colors">
