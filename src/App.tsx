@@ -325,12 +325,33 @@ function App() {
     return result;
   };
 
+  // If the earliest date being colored falls outside the calendar's currently
+  // displayed months, jump the calendar's start year so it's visible —
+  // otherwise applying a range for a year not on screen silently colors days
+  // the user can't see, which looks like the button did nothing.
+  const ensureRangeVisible = (fromISO: string, toISO: string) => {
+    const a = new Date(fromISO + 'T00:00:00Z');
+    const b = new Date(toISO + 'T00:00:00Z');
+    if (isNaN(a.getTime()) || isNaN(b.getTime())) return;
+    const earliest = a <= b ? a : b;
+    const anchorYear = earliest.getUTCFullYear();
+    const anchorMonthIdx = earliest.getUTCMonth();
+
+    const startAbs = startYear * 12 + settings.startMonth;
+    const endAbs = startAbs + settings.numMonths - 1;
+    const anchorAbs = anchorYear * 12 + anchorMonthIdx;
+    if (anchorAbs >= startAbs && anchorAbs <= endAbs) return; // already visible
+
+    setStartYear(anchorMonthIdx >= settings.startMonth ? anchorYear : anchorYear - 1);
+  };
+
   // ── Range handlers ─────────────────────────────────────────────────────────
   const handleDateRangeApply = () => {
     if (!rangeStart || !rangeEnd || !selectedColorId) return;
     const item = legendItems.find(i => i.id === selectedColorId);
     if (!item) return;
     pushToHistory(fillRange(dayColors, rangeStart, rangeEnd, item.id));
+    ensureRangeVisible(rangeStart, rangeEnd);
   };
 
   const handleMonthRangeApply = () => {
@@ -344,6 +365,7 @@ function App() {
     const toISO = lastDay.toISOString().split('T')[0];
 
     pushToHistory(fillRange(dayColors, fromISO, toISO, item.id));
+    ensureRangeVisible(fromISO, toISO);
   };
 
   // ── Click-click range selection ────────────────────────────────────────────
