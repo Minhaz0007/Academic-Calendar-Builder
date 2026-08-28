@@ -1,7 +1,7 @@
 import React from 'react';
 import { CalendarDay, LegendItem, ImportantDate, PrintLegendItem } from '../types';
 import { CalendarTheme } from '../themes';
-import { getImportantDatesSizes } from '../lib/importantDatesSizes';
+import { getImportantDatesSizes, dateColumnWidth } from '../lib/importantDatesSizes';
 
 // ── Month helpers (mirrors ImportantDates.tsx) ─────────────────────────────────
 const MONTH_ABBR_KEYS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -263,7 +263,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
                       </div>
                     )}
 
-                    {/* Entry row — same 38%/flex column split as the editor, so wrapping breaks identically */}
+                    {/* Entry row — same content-fit date column as the editor, so wrapping breaks identically */}
                     <div
                       style={{
                         marginBottom: `${evEntryMb}px`,
@@ -278,7 +278,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
                         gap: '4px',
                       }}
                     >
-                      <span style={{ fontFamily: SERIF, fontSize: `${fs}px`, fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937', width: '38%', flexShrink: 0, wordBreak: 'break-word' }}>
+                      <span style={{ fontFamily: SERIF, fontSize: `${fs}px`, fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937', width: dateColumnWidth(date.dateRange), flexShrink: 0, wordBreak: 'break-word' }}>
                         {date.dateRange}
                       </span>
                       {date.dateRange && date.description && (

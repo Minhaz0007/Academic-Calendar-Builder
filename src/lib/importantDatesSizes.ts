@@ -14,6 +14,14 @@ export interface ImportantDatesSizes {
   legendTopMargin: number; // margin-top above the Color Legend divider
 }
 
+// Width (in `ch` units) for the date-range column, sized to fit its own text
+// instead of a fixed fraction of the row — so the colon sits right after the
+// date instead of stranded partway across a wide fixed column, leaving the
+// description more room to fit on one line.
+export function dateColumnWidth(dateRange: string): string {
+  return `${Math.min(24, Math.max(5, dateRange.length + 1))}ch`;
+}
+
 export function getImportantDatesSizes(fontSize: number): ImportantDatesSizes {
   const fs = fontSize;
   return {
