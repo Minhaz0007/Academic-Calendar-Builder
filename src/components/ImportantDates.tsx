@@ -292,9 +292,10 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
                     placeholder="Event name"
                   />
 
-                  {/* ── Highlight color picker ── */}
+                  {/* ── Highlight color picker — removed from layout (not just faded) when not
+                      hovered, so the description gets the full row width the rest of the time ── */}
                   <label
-                    className="flex-shrink-0 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="flex-shrink-0 cursor-pointer hidden group-hover:inline-flex items-center justify-center"
                     style={{
                       width: `${Math.round(fs * 1.3)}px`,
                       height: `${Math.round(fs * 1.3)}px`,
@@ -302,9 +303,6 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
                       border: date.highlight
                         ? `1.5px solid rgba(0,0,0,0.4)`
                         : `1.5px dashed rgba(0,0,0,0.25)`,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
                       position: 'relative',
                       borderRadius: '2px',
                     }}
@@ -327,7 +325,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
                   {date.highlight && (
                     <button
                       onClick={() => updateDate(date.id, { highlight: undefined })}
-                      className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-700 leading-none"
+                      className="flex-shrink-0 hidden group-hover:inline text-gray-400 hover:text-gray-700 leading-none"
                       style={{ fontSize: `${Math.round(fs * 1.2)}px`, lineHeight: 1 }}
                       title="Clear highlight"
                     >
@@ -338,7 +336,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
                   {/* Delete entry */}
                   <button
                     onClick={() => deleteDate(date.id)}
-                    className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-0.5"
+                    className="text-gray-400 hover:text-red-500 hidden group-hover:inline-block flex-shrink-0 ml-0.5"
                   >
                     <Trash2 size={Math.round(fs * 1.1)} />
                   </button>
