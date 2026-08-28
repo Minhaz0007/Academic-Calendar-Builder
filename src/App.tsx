@@ -7,7 +7,7 @@ import { PrintView } from './components/PrintView';
 import { LegendItem, ImportantDate, CalendarSettings, PrintLegendItem } from './types';
 import { supabase, getSessionKey } from './lib/supabase';
 import { THEMES, getTheme } from './themes';
-import { Printer, Undo2, Redo2, Eraser, Download, Upload, Settings, ChevronDown, CloudUpload, Check, AlertCircle } from 'lucide-react';
+import { Printer, Undo2, Redo2, Eraser, Download, Upload, Settings, ChevronDown, CloudUpload, Check, AlertCircle, Maximize2 } from 'lucide-react';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -25,6 +25,7 @@ const DEFAULT_SETTINGS: CalendarSettings = {
   dateFontSize: 14,
   dateBold: false,
   eventsFontSize: 14,
+  printScale: 1,
 };
 
 const STORAGE_KEY = 'academicCalendarState_v2';
@@ -133,6 +134,10 @@ function App() {
   // unreachable) — changes still save to this browser via localStorage so
   // work isn't lost, but won't sync anywhere else until the cloud recovers.
   const [cloudOffline, setCloudOffline] = useState(false);
+  // Briefly forces the (normally print-only) PrintView to render visibly
+  // off-screen at scale 1, so "Fit to Page" can measure its true unscaled
+  // height and compute the largest Print Scale that avoids clipping.
+  const [measuringFit, setMeasuringFit] = useState(false);
 
   const importRef = useRef<HTMLInputElement>(null);
 
@@ -429,6 +434,39 @@ function App() {
     }
   };
 
+  // ── Fit to Page ────────────────────────────────────────────────────────────
+  // Briefly render PrintView visibly off-screen at scale 1 (see `measuringFit`
+  // prop on <PrintView>), measure how much the Important Dates entries list is
+  // actually overflowing its available space, and set Print Scale to the
+  // largest value that fits it — a best-effort estimate based on the current
+  // browser window's dimensions as a stand-in for the real print page, since
+  // the browser doesn't expose the OS print dialog's actual paper size to JS.
+  const handleFitToPage = () => setMeasuringFit(true);
+
+  useEffect(() => {
+    if (!measuringFit) return;
+    const raf = requestAnimationFrame(() => {
+      const root = document.getElementById('print-view-root');
+      const sidebar = root?.querySelector('[data-print-sidebar]');
+      const lastBlock = sidebar?.lastElementChild as HTMLElement | null;
+      if (root && lastBlock) {
+        // The sidebar's content is left free to overflow past the page at scale 1
+        // (see PrintView), so the true overflow amount is how far past the page's
+        // bottom edge the last rendered block (entries, or Color Legend if present)
+        // actually extends — reading scrollHeight wouldn't see this, since nothing
+        // here clips it.
+        const overflow = Math.max(0, lastBlock.getBoundingClientRect().bottom - root.getBoundingClientRect().bottom);
+        const available = root.clientHeight;
+        const neededScale = overflow > 0 && available > 0
+          ? Math.max(0.5, Math.min(1, (available / (available + overflow)) * 0.98))
+          : 1;
+        setSettings(s => ({ ...s, printScale: Math.round(neededScale * 100) / 100 }));
+      }
+      setMeasuringFit(false);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [measuringFit]);
+
   // ── Generate months ────────────────────────────────────────────────────────
   const months = Array.from({ length: settings.numMonths }, (_, i) => {
     const d = new Date(startYear, settings.startMonth + i, 1);
@@ -723,6 +761,34 @@ function App() {
                   <span className="text-xs text-gray-500 w-6">{settings.eventsFontSize ?? 14}px</span>
                 </div>
 
+                <div className="w-px h-5 bg-gray-300" />
+
+                {/* Print Scale — uniformly zooms the whole printed page (fonts, spacing,
+                    calendar grid, sidebar, all together) as a "shrink to fit" control */}
+                <div className="flex items-center gap-2">
+                  <label className="font-medium text-gray-600 whitespace-nowrap" title="Scales the entire printed page uniformly — use it to shrink everything until a long Important Dates list fits without clipping">
+                    Print Scale:
+                  </label>
+                  <input
+                    type="range"
+                    min={50}
+                    max={110}
+                    step={1}
+                    value={Math.round((settings.printScale ?? 1) * 100)}
+                    onChange={(e) => setSettings(s => ({ ...s, printScale: parseInt(e.target.value) / 100 }))}
+                    className="w-24 accent-blue-600"
+                  />
+                  <span className="text-xs text-gray-500 w-9">{Math.round((settings.printScale ?? 1) * 100)}%</span>
+                  <button
+                    onClick={handleFitToPage}
+                    disabled={measuringFit}
+                    title="Measure the Important Dates list and set Print Scale to the largest size that fits without clipping"
+                    className="flex items-center gap-1 px-2 py-1 rounded border border-gray-300 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                  >
+                    <Maximize2 size={12} /> {measuringFit ? 'Fitting…' : 'Fit to Page'}
+                  </button>
+                </div>
+
                 <span className="text-xs text-gray-400 ml-auto italic">Use the Save button to persist changes to the cloud</span>
               </div>
             </div>
@@ -830,6 +896,8 @@ function App() {
         headerTextColor={activeTheme.headerTextColor}
         theme={activeTheme}
         eventsFontSize={settings.eventsFontSize ?? 14}
+        printScale={settings.printScale ?? 1}
+        measuring={measuringFit}
       />
 
       <style>{`

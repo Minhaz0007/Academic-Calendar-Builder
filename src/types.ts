@@ -33,6 +33,7 @@ export interface CalendarSettings {
   dateFontSize: number; // font size (px) for day numbers in grid
   dateBold: boolean; // render day numbers bold
   eventsFontSize?: number; // base font size (px) for the Important Dates sidebar
+  printScale?: number; // master zoom (0.5-1.1) applied to the whole printed page, to shrink-to-fit
 }
 
 export interface PrintLegendItem {

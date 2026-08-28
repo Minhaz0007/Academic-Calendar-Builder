@@ -76,6 +76,10 @@ interface PrintViewProps {
   headerTextColor?: string;
   theme?: CalendarTheme;
   eventsFontSize?: number; // base font size for the Important Dates sidebar
+  printScale?: number; // master zoom (0.5-1.1) applied to the whole page, to shrink-to-fit
+  // When true, forces the (normally print-only) page to render visibly off-screen at
+  // scale 1, so its true unscaled height can be measured for the "Fit to Page" button.
+  measuring?: boolean;
 }
 
 export const PrintView: React.FC<PrintViewProps> = ({
@@ -96,6 +100,8 @@ export const PrintView: React.FC<PrintViewProps> = ({
   headerTextColor = '#000000',
   theme,
   eventsFontSize = 14,
+  printScale = 1,
+  measuring = false,
 }) => {
   // Derived sizes for the sidebar — shared with ImportantDates.tsx so the
   // editor and the printed output are pixel-identical.
@@ -112,16 +118,35 @@ export const PrintView: React.FC<PrintViewProps> = ({
     legendTopMargin: evLegendTopMargin,
   } = getImportantDatesSizes(fs);
   const cols = months.length <= 6 ? 3 : months.length <= 9 ? 3 : 4;
+  // The measurement pass always renders at scale 1 (true, unscaled size) regardless
+  // of the configured printScale, since that's what "Fit to Page" needs to measure.
+  const effectiveScale = measuring ? 1 : printScale;
 
   return (
     <div
-      className="hidden print:flex print:flex-col w-full bg-white text-black box-border"
+      id="print-view-root"
+      className={measuring ? 'flex flex-col w-full bg-white text-black box-border' : 'hidden print:flex print:flex-col w-full bg-white text-black box-border'}
       style={{
-        fontFamily: theme?.fontFamily ?? "ui-serif, Georgia, serif",
         height: '100vh',
         overflow: 'hidden',
+        ...(measuring ? { position: 'fixed', top: '-10000px', left: '0', visibility: 'hidden' } : {}),
       }}
     >
+      {/* Scaled content — a single wrapper around the whole page so "Print Scale"
+          shrinks (or grows) everything uniformly: fonts, spacing, the calendar
+          grid, and the Important Dates sidebar all together. */}
+      <div
+        data-print-scaled
+        style={{
+          transform: `scale(${effectiveScale})`,
+          transformOrigin: 'top center',
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+          height: '100%',
+          fontFamily: theme?.fontFamily ?? "ui-serif, Georgia, serif",
+        }}
+      >
 
       {/* ── Banner Header ── */}
       <header
@@ -171,9 +196,13 @@ export const PrintView: React.FC<PrintViewProps> = ({
       </header>
 
       {/* ── Body ── */}
+      {/* overflow left as visible (not hidden): Print Scale needs the sidebar's
+          content free to spill past this row's box at scale 1 so the transform
+          below actually shrinks it — the true clip boundary is the outer page
+          div's overflow:hidden, which acts on the already-scaled result. */}
       <div
         className="flex gap-1 px-2 pb-1.5 mt-1"
-        style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}
+        style={{ flex: 1, minHeight: 0 }}
       >
 
         {/* Left: Calendar grid */}
@@ -203,15 +232,18 @@ export const PrintView: React.FC<PrintViewProps> = ({
           </div>
         </div>
 
-        {/* Right: Important Dates + Color Legend sidebar */}
+        {/* Right: Important Dates + Color Legend sidebar — widened from 22% to 28%
+            (calendar grid absorbs the difference) since the calendar is elastic and
+            never overflows, while this sidebar's text content is the only part that
+            can, so giving it more width directly reduces how often entries wrap. */}
         <div
+          data-print-sidebar
           className="flex flex-col min-h-0"
           style={{
-            width: '22%',
+            width: '28%',
             flexShrink: 0,
             borderLeft: '2px solid black',
             paddingLeft: '5px',
-            overflow: 'hidden',
           }}
         >
 
@@ -227,12 +259,12 @@ export const PrintView: React.FC<PrintViewProps> = ({
             </div>
           </div>
 
-          {/* Entries — flex-grow 0 so this box sizes to its own content instead of
-              stretching to fill the sidebar (which pushed Color Legend down to the
-              bottom with a big gap); flex-shrink 1 + overflow hidden still clips
-              excess entries rather than pushing Color Legend off the page when the
-              list is too long for the available space. */}
-          <div style={{ flex: '0 1 auto', overflow: 'hidden' }}>
+          {/* Entries — sizes to its own natural content (not stretched to fill the
+              sidebar, which is what pushed Color Legend down to the bottom with a
+              big gap). Left free to overflow past the page at scale 1: Print
+              Scale + the outer page's overflow:hidden are what decide whether it
+              fits, not a clip here. */}
+          <div data-print-entries>
             {(() => {
               const monthLabels = computeMonthLabels(importantDates, startMonth, startYear);
               let prevMonth: string | null = null;
@@ -347,6 +379,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
