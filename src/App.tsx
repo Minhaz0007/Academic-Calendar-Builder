@@ -740,24 +740,20 @@ function App() {
 
                 <div className="w-px h-5 bg-gray-300" />
 
-                {/* Events font size — 3 fixed notches; entries auto-wrap so nothing clips at larger sizes */}
+                {/* Important Dates font size — continuous; entries auto-wrap and Print
+                    Scale/Fit to Page handle any resulting overflow, so this is free to
+                    move 1px at a time across the full range instead of fixed notches */}
                 <div className="flex items-center gap-2">
-                  <label className="font-medium text-gray-600 whitespace-nowrap">Events Size:</label>
+                  <label className="font-medium text-gray-600 whitespace-nowrap">Important Dates Size:</label>
                   <input
                     type="range"
-                    min={14}
-                    max={18}
-                    step={2}
-                    list="events-size-ticks"
+                    min={8}
+                    max={24}
+                    step={1}
                     value={settings.eventsFontSize ?? 14}
                     onChange={(e) => setSettings(s => ({ ...s, eventsFontSize: parseInt(e.target.value) }))}
                     className="w-24 accent-blue-600"
                   />
-                  <datalist id="events-size-ticks">
-                    <option value="14" />
-                    <option value="16" />
-                    <option value="18" />
-                  </datalist>
                   <span className="text-xs text-gray-500 w-6">{settings.eventsFontSize ?? 14}px</span>
                 </div>
 
