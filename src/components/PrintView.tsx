@@ -172,7 +172,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
 
       {/* ── Body ── */}
       <div
-        className="flex gap-2 px-2 pb-1.5 mt-1"
+        className="flex gap-1 px-2 pb-1.5 mt-1"
         style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}
       >
 
@@ -210,7 +210,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
             width: '22%',
             flexShrink: 0,
             borderLeft: '2px solid black',
-            paddingLeft: '10px',
+            paddingLeft: '5px',
             overflow: 'hidden',
           }}
         >
@@ -227,8 +227,12 @@ export const PrintView: React.FC<PrintViewProps> = ({
             </div>
           </div>
 
-          {/* Entries */}
-          <div className="flex-1" style={{ overflow: 'hidden' }}>
+          {/* Entries — flex-grow 0 so this box sizes to its own content instead of
+              stretching to fill the sidebar (which pushed Color Legend down to the
+              bottom with a big gap); flex-shrink 1 + overflow hidden still clips
+              excess entries rather than pushing Color Legend off the page when the
+              list is too long for the available space. */}
+          <div style={{ flex: '0 1 auto', overflow: 'hidden' }}>
             {(() => {
               const monthLabels = computeMonthLabels(importantDates, startMonth, startYear);
               let prevMonth: string | null = null;
