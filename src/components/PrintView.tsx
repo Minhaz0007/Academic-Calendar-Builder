@@ -125,9 +125,15 @@ export const PrintView: React.FC<PrintViewProps> = ({
   return (
     <div
       id="print-view-root"
-      className={measuring ? 'flex flex-col w-full bg-white text-black box-border' : 'hidden print:flex print:flex-col w-full bg-white text-black box-border'}
+      className={measuring ? 'flex flex-col bg-white text-black box-border' : 'hidden print:flex print:flex-col bg-white text-black box-border'}
       style={{
-        height: '100vh',
+        // A4 landscape (297mm x 210mm) minus the @page margin (4mm each side, see
+        // the print stylesheet) = the true printable area, in physical units — not
+        // 100vh, which varies with the browser window and doesn't match A4's
+        // aspect ratio. This keeps the on-screen preview, Fit to Page's
+        // measurement, and the actual printed page all pixel-for-pixel identical.
+        width: '289mm',
+        height: '202mm',
         overflow: 'hidden',
         ...(measuring ? { position: 'fixed', top: '-10000px', left: '0', visibility: 'hidden' } : {}),
       }}
