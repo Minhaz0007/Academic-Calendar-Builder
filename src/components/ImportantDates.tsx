@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus, Trash2, Highlighter } from 'lucide-react';
 import { ImportantDate, PrintLegendItem } from '../types';
-import { getImportantDatesSizes } from '../lib/importantDatesSizes';
+import { getImportantDatesSizes, dateColumnWidth } from '../lib/importantDatesSizes';
 
 // Grows a <textarea> to fit its content and wraps text instead of clipping it —
 // mirrors how PrintView's plain text spans wrap, so the editor never hides text
@@ -250,7 +250,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
                       fontWeight: 'normal',
                       fontStyle: 'normal',
                       lineHeight: 1.25,
-                      width: '38%',
+                      width: dateColumnWidth(date.dateRange),
                       flexShrink: 0,
                       padding: 0,
                       margin: 0,
