@@ -12,6 +12,15 @@ function autosizeTextarea(el: HTMLTextAreaElement | null) {
   el.style.height = `${el.scrollHeight}px`;
 }
 
+// Same height auto-grow, plus shrinks the box's width to its own text so the
+// colon right after it has no dead space to cross. Falls back to the
+// placeholder's width when empty so the empty box still has a sensible size.
+function autosizeDateField(el: HTMLTextAreaElement | null, fontSize: number, fontFamily: string) {
+  if (!el) return;
+  autosizeTextarea(el);
+  el.style.width = `${dateColumnWidth(el.value || el.placeholder, fontSize, fontFamily)}px`;
+}
+
 // ── Month helpers ──────────────────────────────────────────────────────────────
 // Title-case, no comma — e.g.  "November 2025"
 const MONTH_ABBR_MAP: Record<string, string> = {
@@ -233,31 +242,33 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({
                 }}
               >
                 <div className="flex items-start gap-1">
-                  {/* Date range — auto-grows and wraps instead of clipping, matching PrintView's flowing text */}
-                  <textarea
-                    ref={(el) => autosizeTextarea(el)}
-                    rows={1}
-                    value={date.dateRange}
-                    onChange={(e) => updateDate(date.id, {
-                      dateRange: e.target.value,
-                      ...(isAuto ? { isDateRangeCustomized: true } : {}),
-                    })}
-                    onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
-                    className="text-gray-800 bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none resize-none overflow-hidden"
-                    style={{
-                      fontFamily: SERIF,
-                      fontSize: `${fs}px`,
-                      fontWeight: 'normal',
-                      fontStyle: 'normal',
-                      lineHeight: 1.25,
-                      width: dateColumnWidth(date.dateRange),
-                      flexShrink: 0,
-                      padding: 0,
-                      margin: 0,
-                    }}
-                    placeholder="Dates"
-                  />
-                  <span style={{ fontSize: `${fs}px`, color: '#374151', flexShrink: 0, lineHeight: 1.25 }}>:</span>
+                  {/* Date range + colon, grouped with zero gap so the colon sits right against the date */}
+                  <div className="flex items-start" style={{ flexShrink: 0 }}>
+                    {/* Auto-grows and wraps instead of clipping, matching PrintView's flowing text;
+                        width is measured to the rendered text (see autosizeDateField) */}
+                    <textarea
+                      ref={(el) => autosizeDateField(el, fs, SERIF)}
+                      rows={1}
+                      value={date.dateRange}
+                      onChange={(e) => updateDate(date.id, {
+                        dateRange: e.target.value,
+                        ...(isAuto ? { isDateRangeCustomized: true } : {}),
+                      })}
+                      onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+                      className="text-gray-800 bg-transparent border-none hover:bg-gray-50 focus:bg-blue-50 focus:outline-none resize-none overflow-hidden"
+                      style={{
+                        fontFamily: SERIF,
+                        fontSize: `${fs}px`,
+                        fontWeight: 'normal',
+                        fontStyle: 'normal',
+                        lineHeight: 1.25,
+                        padding: 0,
+                        margin: 0,
+                      }}
+                      placeholder="Dates"
+                    />
+                    <span style={{ fontSize: `${fs}px`, color: '#374151', flexShrink: 0, lineHeight: 1.25 }}>:</span>
+                  </div>
                   {/* Description — same auto-grow/wrap treatment */}
                   <textarea
                     ref={(el) => autosizeTextarea(el)}

@@ -278,12 +278,15 @@ export const PrintView: React.FC<PrintViewProps> = ({
                         gap: '4px',
                       }}
                     >
-                      <span style={{ fontFamily: SERIF, fontSize: `${fs}px`, fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937', width: dateColumnWidth(date.dateRange), flexShrink: 0, wordBreak: 'break-word' }}>
-                        {date.dateRange}
-                      </span>
-                      {date.dateRange && date.description && (
-                        <span style={{ fontFamily: SERIF, fontSize: `${fs}px`, color: '#1f2937', flexShrink: 0 }}>:</span>
-                      )}
+                      {/* Date + colon grouped with zero gap so the colon sits right against the date */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', flexShrink: 0 }}>
+                        <span style={{ fontFamily: SERIF, fontSize: `${fs}px`, fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937', width: `${dateColumnWidth(date.dateRange, fs, SERIF)}px`, wordBreak: 'break-word' }}>
+                          {date.dateRange}
+                        </span>
+                        {date.dateRange && date.description && (
+                          <span style={{ fontFamily: SERIF, fontSize: `${fs}px`, color: '#1f2937' }}>:</span>
+                        )}
+                      </div>
                       <span style={{ fontFamily: SERIF, fontSize: `${fs}px`, fontWeight: 'normal', fontStyle: 'normal', color: '#1f2937', flex: 1, minWidth: 0, wordBreak: 'break-word' }}>
                         {date.description}
                       </span>
