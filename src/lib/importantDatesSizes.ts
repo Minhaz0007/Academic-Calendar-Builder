@@ -48,9 +48,11 @@ export function getImportantDatesSizes(fontSize: number): ImportantDatesSizes {
     legendLabel: Math.round(fs * 1.1),
     squareSize: Math.round(fs * 2),
     // Spacing tightens as font size grows so larger event text still fits
-    // the panel instead of pushing listings past the layout.
-    entryMb: Math.max(1, Math.round(3 - (fs - 6) * 0.25)),
-    headerMt: Math.max(2, Math.round(6 - (fs - 6) * 0.375)),
+    // the panel instead of pushing listings past the layout — squeezed as far
+    // as legibility allows at the top of the Events Size range (14-18px) so
+    // the fullest possible entry list still fits the fixed print page height.
+    entryMb: Math.max(0, Math.round(3 - (fs - 6) * 0.25)),
+    headerMt: Math.max(1, Math.round(10 - fs * 0.5)),
     legendGap: Math.max(2, Math.round(fs * 0.3)),
     legendTopMargin: Math.round(fs * 0.4),
   };
